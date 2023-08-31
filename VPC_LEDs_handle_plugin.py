@@ -292,41 +292,24 @@ class Virpil_Control_Panel_2(Virpil_slave):
     def __init__(self):
         self.led_names = [
                 'B2', 'B1', 'B4', 'B3',
-                'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight',
+                #'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight',
+                'FlapsTop', 'FlapsLeft', 'GearLeft', 'GearFront', 'GearRight', 'FlapsRight',
                 'B10', 'B8', 'B6', 'B9', 'B7', 'B5' ]
         Virpil_slave.__init__(self)
         Virpil_device.createLedBank(self, self.led_names)
 
 
 
+def getRandomColor():
+    return numpy.uint8( random.randrange(65, 256) )
 
 try:
     VPC_left = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() )
     VPC_right = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() )
 
-    # Set master and slave LED colors.
-    VPC_left.setAllMasterLeds(163)
-    VPC_left.setAllSlaveLeds(133)
-    
-    # Or both.
-    VPC_right.setAllLeds(161)
-    
-    VPC_left.activate()
-    VPC_right.activate()
-except:
-    print(traceback.format_exc())
-
-    #time.sleep(10)
-
-def getRandomColor():
-    return numpy.uint8( random.randrange(65, 256) )
-
-try:
-    count = 0
     while 1:
         colorL = getRandomColor()
         colorR = getRandomColor()
-        
         
         for led in VPC_left.led_names:
             VPC_left.setLed( led, getRandomColor() )
@@ -339,9 +322,6 @@ try:
         
         VPC_left.activate()
         VPC_right.activate()
-        
-        count += 1
-        print( str(count) + ':L' + str(colorL) + '/R' + str(colorR) )
         
         time.sleep(0.5)
 except KeyboardInterrupt:
