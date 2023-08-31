@@ -92,7 +92,7 @@ class Virpil_device:
             for name in buttonNames:
                 self._led_bank[name] = numpy.uint8(value)
         else:
-            print( buttonNames)
+            print( buttonNames )
             raise LEDBankExcept('buttonNames' + str( type(buttonNames) ) + 'list arg not valid.')
     
     def checkLedValue(self, value):
@@ -227,15 +227,12 @@ class Virpil_master(Virpil_device):
                 numpy.array( [0x2, self._slave.getCmd(), 0x00, 0x00, 0x00], dtype=numpy.uint8 ) )
         slave_feature_report = numpy.append( slave_feature_report, numpy.array([0xF0], dtype=numpy.uint8) )
         
-        
-        print( master_feature_report )
-        print( slave_feature_report )
-        
         # Then activate LEDs on both.
         if self._hidraw.send_feature_report( master_feature_report ) == -1:
+            print( master_feature_report )
             raise Exception( self._hidraw.error() )
         if self._hidraw.send_feature_report( slave_feature_report ) == -1:
-            
+            print( slave_feature_report )
             raise Exception( self._hidraw.error() )
 
 
@@ -313,8 +310,6 @@ try:
     # Or both.
     VPC_right.setAllLeds(161)
     
-    print( 'Set colors: ' + str(colorL) + ' ' + str(colorR) )
-    
     VPC_left.activate()
     VPC_right.activate()
 except:
@@ -323,6 +318,7 @@ except:
     #time.sleep(10)
 
 try:
+    count = 0
     colorL = numpy.uint8(65) 
     colorR = numpy.uint8(255)
     while 1:
@@ -334,14 +330,20 @@ try:
         VPC_right.setSlaveLed('B11', colorR)
         VPC_right.setLed('H4', colorR)
         
-        print( 'Set colors: ' + str(colorL) + ' ' + str(colorR) )
-        
         VPC_left.activate()
         VPC_right.activate()
         
         # Set all colors in range.
         colorL = (colorL + 1) % 255
         colorR = (colorR - 1) % 255
+        
+        if colorL < 64:
+            colorL = 65
+        if colorR < 64:
+            colorR = 255
+        
+        count += 1
+        print( str(count) + ':' + str(colorL) + '/' + str(colorR) )
         
         time.sleep(0.25)
 except KeyboardInterrupt:

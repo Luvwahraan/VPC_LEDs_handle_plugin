@@ -9,7 +9,6 @@ In progress… slowly. I don’t know python. :p
 ## Limitations
 - When firmware change a LED status, all not firmware defined LED resets to firmware status.
 - Does not make coffee. (-:
-- Changing too quickly and/or many time seems to freeze LEDs.
 
 ## This tends to become a plugin.
 Another [Joystick Gremlin plugin](https://github.com/WhiteMagic/JoystickGremlin), to handle Virpils's LEDs.
