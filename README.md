@@ -3,6 +3,7 @@ In progress… slowly. I don’t know python. :p
 
 ## What actually works
 - Usb hid, with [hidapi](https://github.com/libusb/hidapi) and [cython-hidapi](https://pypi.org/project/hidapi/).
+- LED handle for Virpil, in master and slave modes.
 
 
 
