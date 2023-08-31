@@ -4,11 +4,11 @@ import time
 
 import traceback
 
-
-
-0x00 = 0x0
-
-
+"""
+    I use Virpil HOSAS, with control panels:
+        left Constellation Alpha Prime, with Control Panel #2 in slave.
+        right Constellation Alpha Prime, with Control Panel #1 in slave.
+"""
 
 
 class BadClassType(Exception):
@@ -17,11 +17,16 @@ class WarnVirpilSlaveType(Exception):
     pass
 class LEDValueRange(Exception):
     pass
+class LEDBankExcept(Exception):
+    pass
+
+
 
 class Virpil_device:
     """
     Empty virpil device class.
-    Is not intended to be instanced.
+    Is not intended to be directly instanced.
+    
     
     Attributes
     ----------
@@ -33,14 +38,23 @@ class Virpil_device:
         device is slave
     _led_bank : numpy.uint8 list
         contains device LEDs informations
+        
+    Methods
+    -------
+     createLedBank(buttonNames, value)
+        Create _led_bank dict, with LED names as keys.
+        Default value is LED off (black)
+    setAllLeds(value)
+        Set all LED with value.
+    
     """
     
-    def __init__():
+    def __init__(self):
         self._slave = False
         self._is_slave = False
         self._is_master = False
-        self._led_bank = []
-        self.setCmd( slave_feature_report )
+        self._led_bank = { }
+        self._hid_cmd = 0
     
     def getCmd(self):
         return self._hid_cmd
@@ -59,11 +73,27 @@ class Virpil_device:
     def getLedBank(self):
         return self._led_bank
     
-    def createLedBank(self, nb, value=0b11000000):
+    def createLedBank(self, buttonNames, value=0b11000000):
+        """
+            Fill all led_bank with one value.
+            Need a list, to make dictionnary.
+            Value is optionnal (turn off LEDs by default).
+        """
+        
         # Do not try to create an empty led_bank
-        if nb < 1:
+        if len(buttonNames) < 1:
             raise Exception('Can’t create empty led_bank array.')
-        self._led_bank = numpy.full( nb, 0, dtype=numpy.uint8)
+        
+        # Raise exception if not valid
+        self.checkLedValue(value)
+        
+        # Need a list
+        if isinstance(buttonNames, list):
+            for name in buttonNames:
+                self._led_bank[name] = numpy.uint8(value)
+        else:
+            print( buttonNames)
+            raise LEDBankExcept('buttonNames' + str( type(buttonNames) ) + 'list arg not valid.')
     
     def checkLedValue(self, value):
         if 0 <= value and value <= 255: # between 0b00000000 and 0b11111111
@@ -72,19 +102,25 @@ class Virpil_device:
             raise LEDValueRange('LED value is not in 64-255 range.')
 
     
-    def setLed(self, nb, value):
+    def setLed(self, btnName, value):
         """ Set one led value. """
         self.checkLedValue(value)
         try:
-            self._led_bank[nb] = value
+            self._led_bank[btnName] = numpy.uint8(value)
         except:
             return False
-        
-        return self._led_bank
+    
+    def getLedValues(self):
+        """
+        Returns a 38 uint8 list from _led_bank values.
+        """
+        return numpy.append(
+            list(self.getLedBank().values() ),
+            numpy.zeros( 32 - len(self._led_bank), dtype=numpy.uint8 ) )
+    
     
     def setAllLeds(self, value):
-        self.checkLedValue(value)
-        self._led_bank = numpy.full( len(self._led_bank), value, dtype=numpy.uint8)
+        self.createLedBank( list(self._led_bank.keys()), value )
 
 
 class Virpil_master(Virpil_device):
@@ -94,6 +130,22 @@ class Virpil_master(Virpil_device):
     
     TODO:
         Validate path.
+    
+    
+    Attributes
+    ----------
+    _hidraw : hid.device()
+        hidapi
+    
+    Methods
+    -------
+    getPathByIds(vendor_id, product_id)
+        Searches hid path, by vip/pid.
+    setSlaveLeds(value)
+        Sets all LED for slave.
+        Value is uint8 − 64 to 255 are valid colors
+    activate()
+        Makes hid feature_report and send to device
     """
     
     def _initHID(self):
@@ -104,6 +156,9 @@ class Virpil_master(Virpil_device):
     def __init__(self, vendor_id=False, product_id=False, path=False, slave=False):
         # Need path or vendor_id/product_id couple.
         # slave is optionnal Virpil_slave
+        
+        Virpil_device.__init__(self)
+        
         if path != False: 
             # Doesnt verify if path is valid.
             self._path = path
@@ -120,7 +175,7 @@ class Virpil_master(Virpil_device):
     
     def getPathByIds(self, vendor_id, product_id):
         """
-        Works fine with my config.
+        Works fine with my config. Maybe it’s bad…
         """
         
         hid_device = hid.enumerate(vendor_id, product_id)
@@ -129,7 +184,8 @@ class Virpil_master(Virpil_device):
     
     def setSlave(self, slave):
         """
-        Need a Virpil_slave, but could works with generic Virpil_device.
+        Need a Virpil_slave, but should works with generic Virpil_device,
+            by setting _hid_cmd and _led_bank manually.
         """
         
         if not isinstance( slave, Virpil_device ):
@@ -145,6 +201,9 @@ class Virpil_master(Virpil_device):
     def setAllSlaveLeds(self, value):
         self._slave.setAllLeds(value)
     
+    def setSlaveLed(self, btnName, value):
+        self._slave.setLed(btnName, value)
+    
     def setAllLeds(self, value):
         self.setAllMasterLeds(value)
         self.setAllSlaveLeds(value)
@@ -153,89 +212,130 @@ class Virpil_master(Virpil_device):
         # Construct feature_report with command, leds and end.
         
         # For master
-        master_feature_report = numpy.insert( self._led_bank, 0,
+        master_feature_report = numpy.insert(
+                self.getLedValues(),
+                0,
                 numpy.array( [0x2, self.getCmd(), 0x00, 0x00, 0x00], dtype=numpy.uint8 ) )
-        master_feature_report = numpy.append( master_feature_report, numpy.array([0xF0], dtype=numpy.uint8) )
+        master_feature_report = numpy.append(
+                master_feature_report,
+                numpy.array([0xF0], dtype=numpy.uint8) )
         
         # … and slave
-        slave_feature_report = numpy.insert( self._slave._led_bank, 0,
+        slave_feature_report = numpy.insert(
+                self._slave.getLedValues(),
+                0,
                 numpy.array( [0x2, self._slave.getCmd(), 0x00, 0x00, 0x00], dtype=numpy.uint8 ) )
         slave_feature_report = numpy.append( slave_feature_report, numpy.array([0xF0], dtype=numpy.uint8) )
+        
+        
+        print( master_feature_report )
+        print( slave_feature_report )
         
         # Then activate LEDs on both.
         if self._hidraw.send_feature_report( master_feature_report ) == -1:
             raise Exception( self._hidraw.error() )
         if self._hidraw.send_feature_report( slave_feature_report ) == -1:
+            
             raise Exception( self._hidraw.error() )
 
 
 
 class Virpil_slave(Virpil_device):
     """
-    Virppil device intended to be slaved into a Virpil_master class.
-    Does not need vendor_id/product_id, since the master handle USB.
+    Virpil device intended to be slaved into a Virpil_master class.
+    Does not need vendor_id/product_id or _hid_cmd, since the master handle hidapi.
     """
     
-    _hid_cmd = 0x67 # SLAVE_BOARD
-    
     def __init__(self):
+        Virpil_device.__init__(self)
         self.setThisSlave()
+        self.setCmd(0x67) # SLAVE_BOARD
 
 
 class Virpil_Alpha_Prime(Virpil_master):
-    """
-    Virpil Constellation Alpha Prime class.
-    Register 9 LEDs.
+    """ Virpil Constellation Alpha Prime class.
+    Register 9 LEDs : 5 on side and 4 on top.
     
     https://virpil-controls.eu/vpc-constellation-alpha-prime-l.html
     https://virpil-controls.eu/vpc-constellation-alpha-prime-r.html
     """
     
-    _hid_cmd = 0x68 # EXTRA_LEDS
-    
     def __init__(self, vendor_id=0, product_id=0, slave=0):
+        buttons = [
+                'S1', 'S2', 'S3', 'S4', 'S5',
+                'H1', 'H2', 'H3', 'H4' ]
         Virpil_master.__init__(self, vendor_id=vendor_id, product_id=product_id, slave=slave)
-        Virpil_device.createLedBank(self, 9)
+        Virpil_device.createLedBank(self, buttons)
+        self.setCmd(0x68) # EXTRA_LEDS
 
 
 class Virpil_Control_Panel_1(Virpil_slave):
-    """
-    VPC Control Panel - #1 class
-    Register 12 LEDs
+    """ VPC Control Panel - #1 class
+    Register 12 LEDs : 6 on top buttons and 6 on left bottom buttons.
+    
     https://virpil-controls.eu/vpc-control-panel-1.html
     """
     
     def __init__(self):
-        Virpil_device.createLedBank(self, 12)
+        buttons = [
+                'B10', 'B11', 'B12', 'B7', 'B8',
+                'B9', 'B6', 'B4', 'B2', 'B5', 'B3', 'B1' ]
+        Virpil_slave.__init__(self)
+        Virpil_device.createLedBank(self, buttons)
 
 
 class Virpil_Control_Panel_2(Virpil_slave):
-    """
-    VPC Control Panel - #2 class
-    Register 17 LEDs
+    """ VPC Control Panel - #2 class
+    Register 17 LEDs : 4 on top buttons, 7 on gears, and 6 more on right bottom buttons.
     
     https://virpil-controls.eu/vpc-control-panel-2.html
     """
     
     def __init__(self):
-        Virpil_device.createLedBank(self, 17)
+        buttons = [
+                'B2', 'B1', 'B4', 'B3',
+                'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight',
+                'B10', 'B8', 'B6', 'B9', 'B7', 'B5' ]
+        Virpil_slave.__init__(self)
+        Virpil_device.createLedBank(self, buttons)
 
 
 
-VPC_left = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() )
-VPC_right = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() )
+
+try:
+    VPC_left = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() )
+    VPC_right = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() )
+
+    # Set master and slave LED colors.
+    VPC_left.setAllMasterLeds(163)
+    VPC_left.setAllSlaveLeds(133)
+    
+    # Or both.
+    VPC_right.setAllLeds(161)
+    
+    print( 'Set colors: ' + str(colorL) + ' ' + str(colorR) )
+    
+    VPC_left.activate()
+    VPC_right.activate()
+except:
+    print(traceback.format_exc())
+
+    #time.sleep(10)
 
 try:
     colorL = numpy.uint8(65) 
     colorR = numpy.uint8(255)
     while 1:
-        # Set master and slave LED colors.
-        VPC_left.setAllMasterLeds(colorL)
-        VPC_left.setAllSlaveLeds(colorL)
+        # Set LED on left slave.
+        VPC_left.setSlaveLed('GMiddle', colorL)
+        VPC_left.setLed('H4', colorL)
         
-        # Or both.
-        VPC_right.setAllLeds(colorR)
-    
+        # Set LED on rigt slave.
+        VPC_right.setSlaveLed('B11', colorR)
+        VPC_right.setLed('H4', colorR)
+        
+        print( 'Set colors: ' + str(colorL) + ' ' + str(colorR) )
+        
         VPC_left.activate()
         VPC_right.activate()
         
@@ -243,8 +343,9 @@ try:
         colorL = (colorL + 1) % 255
         colorR = (colorR - 1) % 255
         
-        time.sleep(0.3)
+        time.sleep(0.25)
 except KeyboardInterrupt:
+    print('KeyboardInterrupted')
     exit()
 except:
     print(traceback.format_exc())
