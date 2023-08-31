@@ -1,6 +1,7 @@
 import hid
 import numpy
 import time
+import random
 
 import traceback
 
@@ -258,11 +259,11 @@ class Virpil_Alpha_Prime(Virpil_master):
     """
     
     def __init__(self, vendor_id=0, product_id=0, slave=0):
-        buttons = [
+        self.led_names = [
                 'S1', 'S2', 'S3', 'S4', 'S5',
                 'H1', 'H2', 'H3', 'H4' ]
         Virpil_master.__init__(self, vendor_id=vendor_id, product_id=product_id, slave=slave)
-        Virpil_device.createLedBank(self, buttons)
+        Virpil_device.createLedBank(self, self.led_names)
         self.setCmd(0x68) # EXTRA_LEDS
 
 
@@ -274,11 +275,11 @@ class Virpil_Control_Panel_1(Virpil_slave):
     """
     
     def __init__(self):
-        buttons = [
+        self.led_names = [
                 'B10', 'B11', 'B12', 'B7', 'B8',
                 'B9', 'B6', 'B4', 'B2', 'B5', 'B3', 'B1' ]
         Virpil_slave.__init__(self)
-        Virpil_device.createLedBank(self, buttons)
+        Virpil_device.createLedBank(self, self.led_names)
 
 
 class Virpil_Control_Panel_2(Virpil_slave):
@@ -289,12 +290,12 @@ class Virpil_Control_Panel_2(Virpil_slave):
     """
     
     def __init__(self):
-        buttons = [
+        self.led_names = [
                 'B2', 'B1', 'B4', 'B3',
                 'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight',
                 'B10', 'B8', 'B6', 'B9', 'B7', 'B5' ]
         Virpil_slave.__init__(self)
-        Virpil_device.createLedBank(self, buttons)
+        Virpil_device.createLedBank(self, self.led_names)
 
 
 
@@ -317,37 +318,34 @@ except:
 
     #time.sleep(10)
 
+def getRandomColor():
+    return numpy.uint8( random.randrange(65, 256) )
+
 try:
     count = 0
-    colorL = numpy.uint8(65) 
-    colorR = numpy.uint8(255)
     while 1:
-        # Set LED on left slave.
-        VPC_left.setSlaveLed('GMiddle', colorL)
-        VPC_left.setLed('H4', colorL)
+        colorL = getRandomColor()
+        colorR = getRandomColor()
         
-        # Set LED on rigt slave.
-        VPC_right.setSlaveLed('B11', colorR)
-        VPC_right.setLed('H4', colorR)
+        
+        for led in VPC_left.led_names:
+            VPC_left.setLed( led, getRandomColor() )
+        for led in VPC_left._slave.led_names:
+            VPC_left.setSlaveLed( led, getRandomColor() )
+        for led in VPC_right.led_names:
+            VPC_right.setLed( led, getRandomColor() )
+        for led in VPC_right._slave.led_names:
+            VPC_right.setSlaveLed( led, getRandomColor() )
         
         VPC_left.activate()
         VPC_right.activate()
         
-        # Set all colors in range.
-        colorL = (colorL + 1) % 255
-        colorR = (colorR - 1) % 255
-        
-        if colorL < 64:
-            colorL = 65
-        if colorR < 64:
-            colorR = 255
-        
         count += 1
-        print( str(count) + ':' + str(colorL) + '/' + str(colorR) )
+        print( str(count) + ':L' + str(colorL) + '/R' + str(colorR) )
         
-        time.sleep(0.25)
+        time.sleep(0.5)
 except KeyboardInterrupt:
-    print('KeyboardInterrupted')
+    print("\nKeyboardInterrupted")
     exit()
 except:
     print(traceback.format_exc())
