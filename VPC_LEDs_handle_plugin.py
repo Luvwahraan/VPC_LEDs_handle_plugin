@@ -4,6 +4,8 @@ import random
 
 import traceback
 
+
+
 """
     I use Virpil HOSAS, with control panels:
         left Constellation Alpha Prime, with Control Panel #2 in slave.
@@ -36,7 +38,7 @@ class Virpil_device:
         device has slave
     _is_slave : bool
         device is slave
-    _led_bank : numpy.uint8 list
+    _led_bank : uint8 list
         contains device LEDs informations
         
     Methods
@@ -90,7 +92,7 @@ class Virpil_device:
         # Need a list
         if isinstance(buttonNames, list):
             for name in buttonNames:
-                self._led_bank[name] = numpy.uint8(value)
+                self._led_bank[name] = value
         else:
             print( buttonNames )
             raise LEDBankExcept('buttonNames' + str( type(buttonNames) ) + 'list arg not valid.')
@@ -106,7 +108,7 @@ class Virpil_device:
         """ Set one led value. """
         self.checkLedValue(value)
         try:
-            self._led_bank[btnName] = numpy.uint8(value)
+            self._led_bank[btnName] = value
         except:
             return False
     
@@ -114,9 +116,7 @@ class Virpil_device:
         """
         Returns a 38 uint8 list from _led_bank values.
         """
-        return numpy.append(
-            list(self.getLedBank().values() ),
-            numpy.zeros( 32 - len(self._led_bank), dtype=numpy.uint8 ) )
+        return list(self.getLedBank().values() )
     
     
     def setAllLeds(self, value):
@@ -207,24 +207,15 @@ class Virpil_master(Virpil_device):
         self.setAllMasterLeds(value)
         self.setAllSlaveLeds(value)
     
+    # TO DO: separate master and slave
     def activate(self):
         # Construct feature_report with command, leds and end.
         
         # For master
-        master_feature_report = numpy.insert(
-                self.getLedValues(),
-                0,
-                numpy.array( [0x2, self.getCmd(), 0x00, 0x00, 0x00], dtype=numpy.uint8 ) )
-        master_feature_report = numpy.append(
-                master_feature_report,
-                numpy.array([0xF0], dtype=numpy.uint8) )
+        master_feature_report = [0x2, self.getCmd(), 0x00, 0x00, 0x00] + self.getLedValues() + [0xF0]
         
-        # … and slave
-        slave_feature_report = numpy.insert(
-                self._slave.getLedValues(),
-                0,
-                numpy.array( [0x2, self._slave.getCmd(), 0x00, 0x00, 0x00], dtype=numpy.uint8 ) )
-        slave_feature_report = numpy.append( slave_feature_report, numpy.array([0xF0], dtype=numpy.uint8) )
+        # # … and slave
+        slave_feature_report = [0x2, self._slave.getCmd(), 0x00, 0x00, 0x00] + self._slave.getLedValues() + [0xF0]
         
         # Then activate LEDs on both.
         if self._hidraw.send_feature_report( master_feature_report ) == -1:
@@ -299,7 +290,7 @@ class Virpil_Control_Panel_2(Virpil_slave):
 
 
 def getRandomColor():
-    return numpy.uint8( random.randrange(65, 256) )
+    return random.randrange(65, 256)
 
 
 class Multi_Device_Handler:
@@ -334,13 +325,19 @@ class Multi_Device_Handler:
     def loop(self):
         try:
             while 1:
-                pass
+                for name, device_dict in self._device.items():
+                    for led in device_dict['device']._slave.led_names:
+                        if device_dict['update']:
+                            device_dict['device'].setSlaveLed( led, getRandomColor() )
+                            print('Changing '+led+' for '+name+'’s slave')
+                    device_dict['device'].activate()
+                time.sleep(10)
+            
         except KeyboardInterrupt:
             print("\nKeyboardInterrupted")
             exit()
         except:
             print(traceback.format_exc())
-
 
 
 
@@ -354,6 +351,8 @@ try:
             Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() ) )
     devHandle.addDevice('VPC_right',
             Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() ) )
+
+    devHandle.loop()
 
 except KeyboardInterrupt:
     print("\nKeyboardInterrupted")
