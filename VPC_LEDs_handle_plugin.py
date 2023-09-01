@@ -1,5 +1,4 @@
 import hid
-import numpy
 import time
 import random
 
@@ -192,7 +191,6 @@ class Virpil_master(Virpil_device):
         if not isinstance( slave, Virpil_device ):
             raise BadClassType('Argument is not a Virpil_device: ' + str(type(slave)) )
         elif not isinstance( slave, Virpil_slave ):
-            raise IamAPotato('Potato!')
             raise WarnVirpilSlaveType('Be aware: argument is not a Virpil_slave.' )
         self._slave = slave
     
@@ -292,7 +290,7 @@ class Virpil_Control_Panel_2(Virpil_slave):
     def __init__(self):
         self.led_names = [
                 'B2', 'B1', 'B4', 'B3',
-                #'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight',
+                #'GUp', 'GMiddle', 'GLeft', 'G1', 'G2', 'G3', 'GRight', # I don't know how to call theses LED. /-:
                 'FlapsTop', 'FlapsLeft', 'GearLeft', 'GearFront', 'GearRight', 'FlapsRight',
                 'B10', 'B8', 'B6', 'B9', 'B7', 'B5' ]
         Virpil_slave.__init__(self)
@@ -303,27 +301,60 @@ class Virpil_Control_Panel_2(Virpil_slave):
 def getRandomColor():
     return numpy.uint8( random.randrange(65, 256) )
 
-try:
-    VPC_left = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() )
-    VPC_right = Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() )
 
-    while 1:
-        colorL = getRandomColor()
-        colorR = getRandomColor()
-        
-        for led in VPC_left.led_names:
-            VPC_left.setLed( led, getRandomColor() )
-        for led in VPC_left._slave.led_names:
-            VPC_left.setSlaveLed( led, getRandomColor() )
-        for led in VPC_right.led_names:
-            VPC_right.setLed( led, getRandomColor() )
-        for led in VPC_right._slave.led_names:
-            VPC_right.setSlaveLed( led, getRandomColor() )
-        
-        VPC_left.activate()
-        VPC_right.activate()
-        
-        time.sleep(0.5)
+class Multi_Device_Handler:
+    """
+    Handle multiple Virpil_device object.
+    
+    
+    Attributes
+    ----------
+    _device
+        dictionnary: { deviceName: {device: Virpil_device, update: bool }
+        Setting update to True will cause update at next iteration
+    
+    Methods
+    -------
+    
+    
+    """
+
+    def __init__(self):
+        self._device = {} 
+        self._threads = []
+    
+    def addDevice(self, name, device):
+        if not isinstance( device, Virpil_device ):
+            raise BadClassType('Argument is not a Virpil_device: ' + str(type(device)) )
+        self._device[name] = { 'device': device, 'update': True }
+    
+    def _run_thread(self, function, *args, **kwargs):
+        pass
+    
+    def loop(self):
+        try:
+            while 1:
+                pass
+        except KeyboardInterrupt:
+            print("\nKeyboardInterrupted")
+            exit()
+        except:
+            print(traceback.format_exc())
+
+
+
+
+
+
+
+try:
+    devHandle = Multi_Device_Handler()
+
+    devHandle.addDevice('VPC_left',
+            Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0x0137, slave=Virpil_Control_Panel_2() ) )
+    devHandle.addDevice('VPC_right',
+            Virpil_Alpha_Prime(vendor_id=0x3344, product_id=0xC138, slave=Virpil_Control_Panel_1() ) )
+
 except KeyboardInterrupt:
     print("\nKeyboardInterrupted")
     exit()
