@@ -16,7 +16,8 @@ class LEDValueRange(Exception):
     pass
 class LEDBankExcept(Exception):
     pass
-
+class NoConnectionError(Exception):
+    pass
 
 
 class Virpil_device:

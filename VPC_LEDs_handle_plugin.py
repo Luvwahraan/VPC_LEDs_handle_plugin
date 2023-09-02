@@ -31,8 +31,13 @@ class Multi_Device_Handler():
     Attributes
     ----------
     _device
-        dictionnary: { deviceName: {device: Virpil_device, connexion: bool }
-        Setting update to True will cause update at next iteration
+        dictionnary: {
+            deviceName: {
+                device: Virpil_device,
+                connection: ConnectHandle,
+                threads: Thread,
+                }
+        }
     
     Methods
     -------
@@ -44,42 +49,88 @@ class Multi_Device_Handler():
         self._devices = {}
         self._threads = {}
         threading.Thread.__init__(self)
+        
     
+    def addConnection(self, device_name, conn):
+        '''
+        device_name (str)
+        conn (ConnectHandle)
+        '''
+        
+        # Search for wanted device, and store key (name).
+        found_name = False
+        for name, device in self._devices.items():
+            if name == device_name:
+                found_name = name
+        
+        # Check if device exists, and adds ConnectHandle if do
+        if found_name != False:
+            self._devices[found_name]['connection'] = conn
+        else:
+            raise NoConnectionError( name + 'not found in known devices' )
     
-    def addDevice(self, name, device):
+    def addDevice(self, name, device, conn=False):
+        '''
+        Store virpil device in a dict, by name.
+        
+        name (str)
+        device (Virpil_master or Virpil_slave)
+        conn (optionnal ConnectHandle)
+        '''
+        
         if not isinstance( device, Virpil_device ):
             raise BadClassType('Argument is not a Virpil_device: ' + str(type(device)) )
         
-        self._devices[name] = device
+        # Does not set connection here, in order to check it.
+        self._devices[name] = { 'device': device, 'connection': False, 'thread': False }
         
-        #thread = threading.Thread( device.listen() )
-        #thread.start()
-        #self._threads.append( thread )
+        if conn != False:
+            self.addConnection(name, conn)
+        
+        # Create threads but for masters only, and only servers
+        if isinstance( device, Virpil_master ):
+            if self._devices[name]['connection'].isServer():
+                self._devices[name]['thread'] = threading.Thread(
+                        target=self._devices[name]['connection'].serverListen
+                        )
+        
     
-    def loop(self):
-        try:
-            while True:
-                for name, device in self._devices.items():
+    def randomizeLeds(self):
+        while True:
+            for name, device_dict in self._devices.items():
+            
+                for led in device_dict['device']._slave.led_names:
+                    if device_dict['device'].update:
+                        device_dict['device'].setSlaveLed( led, getRandomColor() )
                 
-                    for led in device._slave.led_names:
-                        if device.update:
-                            device.setSlaveLed( led, getRandomColor() )
-                    
-                    for led in device.led_names:
-                        if device.update:
-                            device.setLed( led, getRandomColor() )
-                
-                    if device.update:
-                        print( 'Activate ' + name )
-                        device.sendFeatureReport(master=True, slave=True)
-                    
-                time.sleep(2)
-        except KeyboardInterrupt:
-            print("\nKeyboardInterrupted")
-            exit()
-        except:
-            print(traceback.format_exc())
-
+                for led in device_dict['device'].led_names:
+                    if device_dict['device'].update:
+                        device_dict['device'].setLed( led, getRandomColor() )
+            
+                if device_dict['device'].update:
+                    print( 'Activate ' + name )
+                    device_dict['device'].sendFeatureReport(master=True, slave=True)
+            
+            time.sleep( random.uniform(0.5, 5) )
+        
+    
+    
+    def start(self):
+        main = threading.Thread( target=self.randomizeLeds )
+        main.start()
+    
+        # Starting devices threads
+        for name, device_dict in self._devices.items():
+            device_dict['thread'].start()
+        
+        
+        # Wait for server threads.
+        for name, device_dict in self._devices.items():
+            device_dict['thread'].join()
+        
+        main.join()
+        
+    
 
 
 
@@ -92,16 +143,18 @@ try:
             Virpil_Alpha_Prime(
                     vendor_id=0x3344, product_id=0x0137,
                     slave=Virpil_Control_Panel_2(),
-                    )
+                    ),
+            ConnectHandle(server=True)
             )
     devHandle.addDevice('VPC_right',
             Virpil_Alpha_Prime(
                     vendor_id=0x3344, product_id=0xC138,
                     slave=Virpil_Control_Panel_1(),
-                    )
+                    ),
+            ConnectHandle(server=True)
             )
 
-    devHandle.loop()
+    devHandle.start()
 
 except KeyboardInterrupt:
     print("\nKeyboardInterrupted")

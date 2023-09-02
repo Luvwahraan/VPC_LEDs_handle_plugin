@@ -14,7 +14,7 @@ In progress… slowly. I don’t know python. :p
 I’m going use some client/server architecture to fix that, but I don’t like it.
 
 ## This tends to become a plugin.
-Another [Joystick Gremlin plugin](https://github.com/WhiteMagic/JoystickGremlin), to handle Virpils's LEDs.
+Another [Joystick Gremlin](https://github.com/WhiteMagic/JoystickGremlin) plugin, to handle Virpils's LEDs.
 
 
 ## Thanks to ryanwoodcox.
