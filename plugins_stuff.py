@@ -94,13 +94,21 @@ class ConnectHandle():
     
     def getPort(self):
         return self._port
-
+        
+    
+    def isServer(self):
+        return self._is_server
+    
+    def isClient(self):
+        return self._is_client
+        
+    
     def __init__(self, server=False, client=False, port=False):
         if server and client:
             raise Exception('Cannot be both client and server.')
         
-        self._is_server = server
-        self._is_client = client
+        self._is_server = bool(server)
+        self._is_client = bool(client)
         
         if server:
             self._initServer(port)
