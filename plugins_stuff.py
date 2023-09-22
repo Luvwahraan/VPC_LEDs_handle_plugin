@@ -1,15 +1,34 @@
 import socket
 import threading
-
+import sys
 import traceback
 
 
 
-KILL_SERVER = bytes( [0xff] )
+try:
+    import gremlin
+    from gremlin.user_plugin import *
+    import logging
+except:
+    pass
+
+def dprint( string ):
+    if 'gremlin' not in sys.modules:
+        print( string )
+    else:
+        gremlin.util.log( string )
+
+KILL_SERVER = 0xff
+EXTRA_LEDS = 0x68
+SLAVE_BOARD = 0x67
+
+TURN_OFF = [0, 0, 0, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 0xf0]
+
 
 class ConnectHandle():
     _port = 14517
     _buffer_size = 38*8
+    
     
     def clientSend(self, data):
         if not self._is_client:
@@ -21,14 +40,14 @@ class ConnectHandle():
         if socket == False:
             raise Exception('Something goes wrong with socket.connect')
         
-        print('Client sending data')
-        self._socket.send(data)
+        #dprint('Client sending data')
+        self._socket.send( data )
     
-    def serverListen(self):
+    def serverListen(self, callback=False):
         if not self._is_server:
             raise Exception('Not a socket server instance')
         
-        print('Server listening on port ' + str(self.getPort()) )
+        dprint('Server listening on port ' + str(self.getPort()) )
         
         # Listen only one client at a time.
         self._socket.listen(1)
@@ -36,17 +55,46 @@ class ConnectHandle():
         running = True
         while running:
             (client, address) = self._socket.accept()
+            #dprint('New client ' +str(address ) )
             data = bytes( client.recv( self._buffer_size ) )
+            
         
             if data != '':
-                print('Receiving data on port ' + str(self.getPort()) + ':', end='')
-                print( data )
+                #print('Receiving data on port ' + str(self.getPort()) + ':', end='')
+                #print( data )
+                pass
             
             # Stop server
-            if data == KILL_SERVER:
+            if data == bytes( [KILL_SERVER] ):
                 print('Stop data reveived; killing server ' + str(self.getPort()) )
                 running = False
+                
+                # Joystick LEDs off
+                data = [0x02, 0x68] + TURN_OFF
+                #print( 'dataMaster:' + str(data) )
+                callback(master=True, featureReport=data )
+                
+                # Board LEDs off
+                data = [0x02, 0x67] + TURN_OFF
+                #print( 'dataSlave:' + str(data) )
+                callback(slave=True, featureReport=data )
+                
+                return
+                
+            if callback == False:
+                raise Exception('No callback: server '+str(self.getPort())+' is useless')
             
+            #if data[1] == EXTRA_LEDS:
+            #    print('Constellation Alpha Grip LEDS')
+            #    pass
+            #elif data[1] == SLAVE_BOARD:
+            #    print('Slave board LEDs')
+            #    pass
+            #else:
+            #    print( 'Data unknown' )
+            
+            if running:
+                callback( master=True, featureReport=data )
             data = ''
     
     
@@ -60,7 +108,7 @@ class ConnectHandle():
             port = ConnectHandle._port
         self._port = port
         
-        print( 'Init server on port ' + str(port) )
+        #dprint( 'Init server on port ' + str(port) )
         
         try:
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,7 +119,7 @@ class ConnectHandle():
             
             self._socket.bind( ('localhost', self._port) )
         except:
-             print(traceback.format_exc())
+             dprint(traceback.format_exc())
         
         if self._port == ConnectHandle._port:
             ConnectHandle._port += 1
@@ -87,7 +135,7 @@ class ConnectHandle():
             port = ConnectHandle._port
         self._port = port
         
-        print( 'Init client on port ' + str(port) )
+        dprint( 'Init client on port ' + str(port) )
         
         if self._port == ConnectHandle._port:
             ConnectHandle._port += 1
@@ -117,6 +165,6 @@ class ConnectHandle():
     
     def __del__(self):
         if self._is_client or self._is_server :
-            print('Closing socket')
+            dprint('Closing socket')
             self._socket.close()
 

@@ -19,6 +19,25 @@ class LEDBankExcept(Exception):
 class NoConnectionError(Exception):
     pass
 
+class Device_Type:
+    def __init__(self, led_types):
+        match led_types.lower():
+            case 'default':
+                self.command = 0x64
+            case 'add-board':
+                self.command = 0x65
+            case 'on-board':
+                self.command = 0x66
+            case 'slave-board':
+                self.command = 0x67
+            case 'extra-leds':
+                self.command = 0x68
+            case 'other':
+                raise Exception('Bad board type.')
+        
+        self.led_types = led_types
+        
+    
 
 class Virpil_device:
     """
@@ -47,12 +66,14 @@ class Virpil_device:
     
     """
     
-    def __init__(self):
+    def __init__(self, led_types):
         self._slave = False
         self._is_slave = False
         self._is_master = False
         self._led_bank = { }
         self._hid_cmd = 0
+        
+        self._led_types = Device_Type( led_types )
         
         self.update = True
         
@@ -78,7 +99,7 @@ class Virpil_device:
     def createLedBank(self, buttonNames, value=0b11000000):
         """
             Fill all led_bank with one value.
-            Need a list, to make dictionnary.
+            Need an ordered string list referring to LEDs, to make dictionnary.
             Value is optionnal (turn off LEDs by default).
         """
         
@@ -94,7 +115,7 @@ class Virpil_device:
             for name in buttonNames:
                 self._led_bank[name] = value
         else:
-            print( buttonNames )
+            #print( buttonNames )
             raise LEDBankExcept('buttonNames' + str( type(buttonNames) ) + 'list arg not valid.')
         
     
@@ -136,7 +157,7 @@ class Virpil_slave(Virpil_device):
     """
     
     def __init__(self):
-        Virpil_device.__init__(self)
+        Virpil_device.__init__(self, 'slave-board')
         self.setThisSlave()
         self.setCmd(0x67) # SLAVE_BOARD
         
@@ -186,7 +207,7 @@ class Virpil_master(Virpil_device):
             self._hidraw.close()
         
     
-    def __init__(self, vendor_id=False, product_id=False, path=False, slave=False ):
+    def __init__(self, led_types, vendor_id=False, product_id=False, path=False, slave=False ):
         """
         Need path or vendor_id/product_id couple.
         slave is optionnal Virpil_slave
@@ -197,7 +218,7 @@ class Virpil_master(Virpil_device):
         to True, with or without port.
         """
         
-        Virpil_device.__init__(self)
+        Virpil_device.__init__(self, led_types)
         
         self._featureReports = { 'master': [], 'slave': [] }
         
@@ -269,30 +290,34 @@ class Virpil_master(Virpil_device):
             raise Exception('Can’t send both master and slave feature_report')
 
         if master:
-            print( 'sending for master' )
+            #print( 'sending for master' )
         
             # Use arg featureReport, or construct with self data.
-            if featureReport == True:
+            if featureReport:
+                #print( 'Received featureReport' )
                 self._featureReports['master'] = featureReport
             else:
                 self.constructMasterFeature()
                 
             if self._hidraw.send_feature_report( self._featureReports['master'] ) == -1:
-                print( self._featureReports['master'] )
-                raise Exception( self._hidraw.error() )
+                #print( self._featureReports['master'] )
+                raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
+            #print( self._featureReports['master'] )
         
         if slave:
-            print( 'sending for slave' )
+            #print( 'sending for slave' )
             
             if featureReport == True:
+                #print( 'Received featureReport' )
                 self._featureReports['slave'] = featureReport
             else:
                 self.constructSlaveFeature()
             
             if self._hidraw.send_feature_report( self._featureReports['slave'] ) == -1:
-                print( self._featureReports['slave'] )
+                #print( self._featureReports['slave'] )
                 raise Exception( self._hidraw.error() )
                 #raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
+            #print( self._featureReports['slave'] )
         
     
 
@@ -310,7 +335,7 @@ class Virpil_Alpha_Prime(Virpil_master):
         self.led_names = [
                 'S1', 'S2', 'S3', 'S4', 'S5',
                 'H1', 'H2', 'H3', 'H4' ]
-        Virpil_master.__init__(self, vendor_id=vendor_id, product_id=product_id, slave=slave)
+        Virpil_master.__init__(self, 'extra-leds', vendor_id=vendor_id, product_id=product_id, slave=slave)
         Virpil_device.createLedBank(self, self.led_names)
         self.setCmd(0x68) # EXTRA_LEDS
         
