@@ -40,3 +40,4 @@ Thanks too to [charliefoxtwo], for same reason: [virpilLeds.md](https://gist.git
 - Fix and complete colors
 - A better way to kill server
 - Describe how it works
+− better generateButtonEvents (in file?)
