@@ -189,7 +189,7 @@ BUTTONS = {
         },
         41: {
             'left': {
-                'B7': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
+                'B9': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
             },
             'description': 'Turret 3'
         },
