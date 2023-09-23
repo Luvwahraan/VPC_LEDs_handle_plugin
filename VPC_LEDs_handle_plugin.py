@@ -81,68 +81,9 @@ to_update = {
 timed_leds = []
 
 BUTTONS = {
-    'left': {
-        1: {
-            'left': {
-                'H1': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H2': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H3': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H4': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-            }
-        },
-        33: {
-            'left': {
-                 'B1': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-        },
-        34: {
-            'left': {
-                 'B2': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-        },
-        72: {
-            'left': {
-                 'GearIndicator': { 'color': 'red-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-        },
-        74: {
-            'left': {
-                'GearDownLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-            },
-        },
-        73: {
-            'left': {
-                'GearUpNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-            },
-        },
-        42: {
-            'left': {
-                 'B10': { 'color': 'red', 'device': 'slave', 'active': False, 'type': 'toggle' },
-                },
-        },
-        37: {
-            'left': {
-                'B5': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-        },
-        39: {
-            'left': {
-                'B7': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-        },
-        41: {
-            'left': {
-                'B9': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-        },
-    },
     'right': {                          # Physical joystick button side
         33: {                           # Physical joystick button number
-            'right': {                  # LED side: self or right
+            'right': {                  # LED side: on joystick self or right
                 'B1': {                 # Button name on panel or grip; see list above
                     'color':'white-dim',# See colorMap{}
                     'device': 'slave',  # master or slave device
@@ -150,6 +91,7 @@ BUTTONS = {
                     'type': 'toggle'    # toggle, hold, timed
                     },
                 },
+            'description': 'Do thing'   # (optionnal)
             },
         34: {
             'left': {
@@ -164,23 +106,99 @@ BUTTONS = {
             'right': {
                 'B7': {'color':'yellow-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
+            'description': 'Quantum MODE'
         },
         42: {
             'right': {
                 'B10': {'color':'red-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
+            'description': 'Weapons power toggle'
         },
         43: {
             'right': {
                 'B11': {'color':'cyan-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
+            'description': 'Engine power toggle'
         },
         44: {
             'right': {
                 'B12': {'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
+            'description': 'Shields power toggle'
         },
-    }
+    },
+    'left': {
+        1: {
+            'left': {
+                'H1': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
+                'H2': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
+                'H3': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
+                'H4': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
+            }
+        },
+        33: {
+            'left': {
+                 'B1': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+            },
+            'description': 'Lights toggle'
+        },
+        34: {
+            'left': {
+                 'B2': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+            'description': 'Call ATC'
+        },
+        72: {
+            'left': {
+                 'GearIndicator': { 'color': 'red-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+            'description': 'Gears up / retract'
+        },
+        74: {
+            'left': {
+                'GearDownLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearDownNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearDownRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+            },
+            'description': 'Gears down'
+        },
+        73: {
+            'left': {
+                'GearUpNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearUpLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearUpRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+            },
+            'description': 'Expand'
+        },
+        42: {
+            'left': {
+                 'B10': { 'color': 'red', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                },
+        },
+        37: {
+            'left': {
+                'B5': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+            'description': 'Turret 1'
+        },
+        39: {
+            'left': {
+                'B7': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+            'description': 'Turret 2'
+        },
+        41: {
+            'left': {
+                'B7': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+            'description': 'Turret 3'
+        },
+        36: {
+            'left': {
+                'B4': { 'color': 'yellow-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+            },
+        },
+    },
 }
 
 
@@ -339,6 +357,7 @@ def generateButtonEvents():
         'pressed': '',
         'released_event': '',
         'released': '',
+        'description': '',
     }
     
     for joy_side in ['left','right']:
@@ -349,17 +368,22 @@ def generateButtonEvents():
             thisJoy = 'RJoy'
     
         for btn in BUTTONS[joy_side].keys():
-            generatedDict['header'] = "\n\n@{j}.button({nb})\n".format(j=thisJoy, nb=btn)
+            generatedDict['header'] = "@{j}.button({nb})\n".format(j=thisJoy, nb=btn)
             generatedDict['header'] += "def handleButton( event, joy ):\n    btn = {nb}".format(nb=btn)
             
-            generatedDebug = "        dprint( 'Button ' + str(btn) + ' pushed' )\n        "
-
+            generatedDict['description'] = ''
             
             for led_side in BUTTONS[joy_side][btn].keys():
+            
+                if led_side == 'description':
+                    generatedDict['description'] = '# ' + BUTTONS[joy_side][btn][led_side] + "\n"
+                    break
+            
                 generatedDict['pressed_event'] = ''
                 generatedDict['pressed'] = ''
                 generatedDict['released_event'] = ''
                 generatedDict['released'] = ''
+                
                 for led_name in BUTTONS[joy_side][btn][led_side].keys():
                     generatedDict['comment'] = ''
                     
@@ -414,6 +438,7 @@ def generateButtonEvents():
                         generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
                     
                 
+            generated += "\n\n" + generatedDict['description']
             generated += generatedDict['header'] + generatedDict['comment']
             generated += generatedDict['pressed_event'] + generatedDict['pressed']
             generated += generatedDict['released_event'] + generatedDict['released']
@@ -424,7 +449,7 @@ def generateButtonEvents():
 
 # Do this, then
 # [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} 
-#generateButtonEvents()
+generateButtonEvents()
 
 
 
@@ -458,6 +483,7 @@ def handleButton( event, joy ):
         to_update['left']['master'] = True
 
 
+# Lights toggle
 @LJoy.button(33)
 def handleButton( event, joy ):
     btn = 33 # toggle button
@@ -468,6 +494,7 @@ def handleButton( event, joy ):
         to_update['left']['slave'] = True
 
 
+# Call ATC
 @LJoy.button(34)
 def handleButton( event, joy ):
     btn = 34 # timed button
@@ -475,10 +502,11 @@ def handleButton( event, joy ):
     if event.is_pressed:
         dprint('Button_' + str(btn) + ' led B2')
         BUTTONS['left'][btn]['left']['B2']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B2','button':'34', 'button_side': 'left', 'timer': period * 2})
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B2','button':'34', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
+# Gears up / retract
 @LJoy.button(72)
 def handleButton( event, joy ):
     btn = 72 # timed button
@@ -486,10 +514,11 @@ def handleButton( event, joy ):
     if event.is_pressed:
         dprint('Button_' + str(btn) + ' led GearIndicator')
         BUTTONS['left'][btn]['left']['GearIndicator']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'GearIndicator','button':'72', 'button_side': 'left', 'timer': period * 2})
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'GearIndicator','button':'72', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
+# Gears down
 @LJoy.button(74)
 def handleButton( event, joy ):
     btn = 74 # hold button
@@ -514,6 +543,7 @@ def handleButton( event, joy ):
         to_update['left']['slave'] = True
 
 
+# Expand
 @LJoy.button(73)
 def handleButton( event, joy ):
     btn = 73 # hold button
@@ -548,6 +578,7 @@ def handleButton( event, joy ):
         to_update['left']['slave'] = True
 
 
+# Turret 1
 @LJoy.button(37)
 def handleButton( event, joy ):
     btn = 37 # timed button
@@ -555,10 +586,11 @@ def handleButton( event, joy ):
     if event.is_pressed:
         dprint('Button_' + str(btn) + ' led B5')
         BUTTONS['left'][btn]['left']['B5']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B5','button':'37', 'button_side': 'left', 'timer': period * 2})
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B5','button':'37', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
+# Turret 2
 @LJoy.button(39)
 def handleButton( event, joy ):
     btn = 39 # timed button
@@ -566,21 +598,34 @@ def handleButton( event, joy ):
     if event.is_pressed:
         dprint('Button_' + str(btn) + ' led B7')
         BUTTONS['left'][btn]['left']['B7']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'39', 'button_side': 'left', 'timer': period * 2})
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'39', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
+# Turret 3
 @LJoy.button(41)
 def handleButton( event, joy ):
     btn = 41 # timed button
 
     if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B9')
-        BUTTONS['left'][btn]['left']['B9']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B9','button':'41', 'button_side': 'left', 'timer': period * 2})
+        dprint('Button_' + str(btn) + ' led B7')
+        BUTTONS['left'][btn]['left']['B7']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'41', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
+@LJoy.button(36)
+def handleButton( event, joy ):
+    btn = 36 # timed button
+
+    if event.is_pressed:
+        dprint('Button_' + str(btn) + ' led B4')
+        BUTTONS['left'][btn]['left']['B4']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B4','button':'36', 'button_side': 'left', 'timer': period * 2 })
+        to_update['left']['slave'] = True
+
+
+# Do thing
 @RJoy.button(33)
 def handleButton( event, joy ):
     btn = 33 # toggle button
@@ -604,6 +649,7 @@ def handleButton( event, joy ):
         to_update['right']['slave'] = True
 
 
+# Quantum MODE
 @RJoy.button(39)
 def handleButton( event, joy ):
     btn = 39 # toggle button
@@ -614,6 +660,7 @@ def handleButton( event, joy ):
         to_update['right']['slave'] = True
 
 
+# Weapons power toggle
 @RJoy.button(42)
 def handleButton( event, joy ):
     btn = 42 # toggle button
@@ -624,6 +671,7 @@ def handleButton( event, joy ):
         to_update['right']['slave'] = True
 
 
+# Engine power toggle
 @RJoy.button(43)
 def handleButton( event, joy ):
     btn = 43 # toggle button
@@ -634,6 +682,7 @@ def handleButton( event, joy ):
         to_update['right']['slave'] = True
 
 
+# Shields power toggle
 @RJoy.button(44)
 def handleButton( event, joy ):
     btn = 44 # toggle button
