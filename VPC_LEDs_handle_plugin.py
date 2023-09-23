@@ -5,6 +5,11 @@ import sys
 
 import logging
 
+
+period = 750 # ms
+# Periodic LEDs update is period/3 (250ms)
+# Timers default time is period * 2, and decrease each period
+
 mode_global = ModeVariable("Global", "gl")
 
 def dprint( string ):
@@ -251,35 +256,39 @@ JDecorators = {
     }
 
 
-period = 750 # ms
 
 
 @gremlin.input_devices.periodic(period / 1000)
 def checkTimed():
+    """
+    Check times_leds list to handle timers.
+    """
+    
     if len( timed_leds ) > 0:
         dprint('timed callback timer ' + str(timed_leds) )
-    
-    try:
-        for led_nb in range( len(timed_leds) ):            
-            joy_side = timed_leds[led_nb]['button_side']
-            button = int(timed_leds[led_nb]['button'])
-            led_side = timed_leds[led_nb]['side']
-            led_name = timed_leds[led_nb]['led']
-            led_dev = timed_leds[led_nb]['device']
-            
-            if timed_leds[led_nb]['timer'] > 0:
-                timed_leds[led_nb]['timer'] -= period
-            else:
-                dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(
-                        b=button,s=joy_side,l=led_name,sl=led_side) )
-                dprint( BUTTONS['left'][37]['left']['B5'] )
-                BUTTONS[joy_side][button][led_side][led_name]['active'] = False
-                to_update[led_side][led_dev] = True
-                del( timed_leds[led_nb] )
-        
-    except:
-        dprint( traceback.format_exc() )
         pass
+    
+    to_delete = []
+    
+    for led_nb in range( len(timed_leds) ):            
+        joy_side = timed_leds[led_nb]['button_side']
+        button = int(timed_leds[led_nb]['button'])
+        led_side = timed_leds[led_nb]['side']
+        led_name = timed_leds[led_nb]['led']
+        led_dev = timed_leds[led_nb]['device']
+        
+        if timed_leds[led_nb]['timer'] > 0:
+            timed_leds[led_nb]['timer'] -= period
+        else:
+            dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(b=button,s=joy_side,l=led_name,sl=led_side) )
+            BUTTONS[joy_side][button][led_side][led_name]['active'] = False
+            to_update[led_side][led_dev] = True
+            to_delete.append( led_nb )
+        
+    if len( to_delete ) > 0:
+        to_delete.sort(reverse=True)
+        for led_nb in to_delete:
+            del( timed_leds[led_nb] )
     
 
 @gremlin.input_devices.periodic(period / 3000)
@@ -293,7 +302,7 @@ def checkUpdates():
         
             # Update buttons who have to
             if to_update[side][device]:
-                dprint('Periodic callback update: ' + side + ' ' + device )
+                #dprint('Periodic callback update: ' + side + ' ' + device )
                 
                 if device == 'slave':
                     slave_device = True
@@ -304,7 +313,7 @@ def checkUpdates():
                     #dprint('Try to build data for ' + device)
                     report_feature = buildReportFeature(side, slave=slave_device)
                     
-                    #dprint('Sending feature for ' + side + ' ' + device + ':' + str(report_feature) + ' on port ' + str( sock_clients[side].getPort() ) )
+                    dprint('Sending feature for ' + side + ' ' + device + ':' + str(report_feature) + ' on port ' + str( sock_clients[side].getPort() ) )
                     sock_clients[side].clientSend( bytes(report_feature) )
                     
                     # We don't need to do this until next update
@@ -399,7 +408,8 @@ def generateButtonEvents():
                                 dev=device, led=led_name, side=led_side)
                         generatedDict['pressed'] += "'button':'{nb}', 'button_side': '{s}', ".format(
                                 nb=btn, s=joy_side)
-                        generatedDict['pressed'] += "'timer': period * 2})\n"
+                        generatedDict['pressed'] += "'timer': period * 2"
+                        generatedDict['pressed'] += " })\n"
                         
                         generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
                     
