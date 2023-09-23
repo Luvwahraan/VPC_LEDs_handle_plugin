@@ -72,6 +72,9 @@ to_update = {
     'right': {'master': True, 'slave': True}
     }
 
+# Timed LED list
+timed_leds = []
+
 BUTTONS = {
     'left': {
         1: {
@@ -191,7 +194,7 @@ def buildReportFeature(side, slave=False ):
     
     data.append(0xf0)
 
-    dprint( 'Building empty for ' + device + ' ' + str(data) )
+    #dprint( 'Building empty for ' + device + ' ' + str(data) )
     
     # For both left and right joystick's buttons
     for btn_side in BUTTONS.keys():
@@ -248,68 +251,50 @@ JDecorators = {
     }
 
 
-def generateButtonEvents():
-    generated = ''
-    
-    for joy_side in ['left','right']:
-        thisJoy = ''
-        if joy_side == 'left':
-            thisJoy = 'LJoy'
-        elif joy_side == 'right':
-            thisJoy = 'RJoy'
-    
-        for btn in BUTTONS[joy_side].keys():
-            generatedHeader = """
-@{j}.button({nb})
-def handleButton( event, joy ):
-""".format(j=thisJoy, nb=btn)
+period = 750 # ms
 
-            generatedButton = ''
-            generatedEvent = """    if event.is_pressed:
-        dprint( 'Button ' + str({nb}) + ' pushed' )
-    """.format(nb=btn)
+
+@gremlin.input_devices.periodic(period / 1000)
+def checkTimed():
+    if len( timed_leds ) > 0:
+        dprint('timed callback timer ' + str(timed_leds) )
+    
+    try:
+        for led_nb in range( len(timed_leds) ):            
+            joy_side = timed_leds[led_nb]['button_side']
+            button = int(timed_leds[led_nb]['button'])
+            led_side = timed_leds[led_nb]['side']
+            led_name = timed_leds[led_nb]['led']
+            led_dev = timed_leds[led_nb]['device']
             
-            for led_side in BUTTONS[joy_side][btn].keys():
-                for led_name in BUTTONS[joy_side][btn][led_side].keys():
-                    device = BUTTONS[joy_side][btn][led_side][led_name]['device']
-                    dprint('Button' + str(btn) + ' led ' + led_name )
-                    
-                    if BUTTONS[joy_side][btn][led_side][led_name]['type'] == 'hold':
-                        generatedEvent = "    dprint( 'Button ' + str({nb}) + ' pushed' )\n".format(nb=btn)
-                        spacer = ''
-                    else:
-                        spacer = '    '
-                    
-                    dprint('ok')
-                    
-                    # Replace colorname by value
-                    color = colorMap[ BUTTONS[joy_side][btn][led_side][led_name]['color'] ]
-                    
-                    generatedButton += """
-{sp}    if BUTTONS['{js}'][{nb}]['{side}']['{led}']['active']:
-{sp}        dprint( 'Set LED {led} on {side} {dev} to off.' )
-{sp}        BUTTONS['{js}'][{nb}]['{side}']['{led}']['active'] = False
-{sp}    else:
-{sp}        dprint( 'Set LED {led} on {side} {dev} to on.' )
-{sp}        BUTTONS['{js}'][{nb}]['{side}']['{led}']['active'] = True
-{sp}    
-{sp}    to_update['{js}']['{dev}'] = True
-""".format(nb=btn, js=joy_side, led=led_name, side=led_side, dev=device, sp=spacer)
-    
-            generated += generatedHeader + generatedEvent + generatedButton
-    
-    dprint(  generated + "\n\n"+'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ')
+            if timed_leds[led_nb]['timer'] > 0:
+                timed_leds[led_nb]['timer'] -= period
+            else:
+                dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(
+                        b=button,s=joy_side,l=led_name,sl=led_side) )
+                dprint( BUTTONS['left'][37]['left']['B5'] )
+                BUTTONS[joy_side][button][led_side][led_name]['active'] = False
+                to_update[led_side][led_dev] = True
+                del( timed_leds[led_nb] )
+        
+    except:
+        dprint( traceback.format_exc() )
+        pass
     
 
-
-@gremlin.input_devices.periodic(0.25)
-def sendReportFeatures():
+@gremlin.input_devices.periodic(period / 3000)
+def checkUpdates():
     #dprint('Periodic callback' + str(to_update) )
     
     for side in to_update.keys():
         ThisJoy = JDecorators[side]
+        
         for device in to_update[side].keys():
+        
+            # Update buttons who have to
             if to_update[side][device]:
+                dprint('Periodic callback update: ' + side + ' ' + device )
+                
                 if device == 'slave':
                     slave_device = True
                 else:
@@ -319,16 +304,113 @@ def sendReportFeatures():
                     #dprint('Try to build data for ' + device)
                     report_feature = buildReportFeature(side, slave=slave_device)
                     
-                    dprint('Sending feature for ' + side + ' ' + device + ':' + str(report_feature) + ' on port ' + str( sock_clients[side].getPort() ) )
+                    #dprint('Sending feature for ' + side + ' ' + device + ':' + str(report_feature) + ' on port ' + str( sock_clients[side].getPort() ) )
                     sock_clients[side].clientSend( bytes(report_feature) )
                     
                     # We don't need to do this until next update
                     to_update[side][device] = False
                 except:
-                    dprint( traceback.format_exc() )
+                    #dprint( traceback.format_exc() )
+                    pass
+            
+        
+    
+
 
 LJoy = JDecorators['left']
 RJoy = JDecorators['right']
+
+
+def generateButtonEvents():
+    generated = ''
+    generatedDict = {
+        'header': '',
+        'comment': '',
+        'pressed_event': '',
+        'pressed': '',
+        'released_event': '',
+        'released': '',
+    }
+    
+    for joy_side in ['left','right']:
+        thisJoy = ''
+        if joy_side == 'left':
+            thisJoy = 'LJoy'
+        elif joy_side == 'right':
+            thisJoy = 'RJoy'
+    
+        for btn in BUTTONS[joy_side].keys():
+            generatedDict['header'] = "\n\n@{j}.button({nb})\n".format(j=thisJoy, nb=btn)
+            generatedDict['header'] += "def handleButton( event, joy ):\n    btn = {nb}".format(nb=btn)
+            
+            generatedDebug = "        dprint( 'Button ' + str(btn) + ' pushed' )\n        "
+
+            
+            for led_side in BUTTONS[joy_side][btn].keys():
+                generatedDict['pressed_event'] = ''
+                generatedDict['pressed'] = ''
+                generatedDict['released_event'] = ''
+                generatedDict['released'] = ''
+                for led_name in BUTTONS[joy_side][btn][led_side].keys():
+                    generatedDict['comment'] = ''
+                    
+                    device = BUTTONS[joy_side][btn][led_side][led_name]['device']
+                    
+                    # Replace colorname by value
+                    color = colorMap[ BUTTONS[joy_side][btn][led_side][led_name]['color'] ]
+                    
+                    btype = BUTTONS[joy_side][btn][led_side][led_name]['type']
+                    generatedDict['comment'] = " # {t} button\n".format(t=btype)
+                        
+                    button_led = "BUTTONS['{js}'][btn]['{side}']['{led}']".format(
+                            js=joy_side, led=led_name, side=led_side)
+                    
+                    value = "BUTTONS['{js}'][btn]['{side}']['{led}']['active']".format(
+                            nb=btn, js=joy_side, led=led_name, side=led_side )
+                            
+                    generatedDict['pressed'] += "        dprint('Button_' + str(btn) + "
+                    generatedDict['pressed'] += "' led {led}')\n".format(led=led_name)
+                    
+                    if btype == 'toggle':
+                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
+                        generatedDict['pressed'] += "        {button}['active'] = not {val}\n".format(
+                                button=button_led, val=value)
+                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
+                        
+                    elif btype == 'hold':
+                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
+                        generatedDict['pressed'] += "        {button}['active'] = True\n".format(
+                                button=button_led, js=joy_side, led=led_name, side=led_side)
+                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
+                        
+                        generatedDict['released_event'] = "\n    else:\n"
+                        generatedDict['released'] += "        {button}['active'] = False\n".format(
+                                button=button_led, js=joy_side, led=led_name, side=led_side)
+                        generatedDict['released'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
+                        
+                    elif btype == 'timed':
+                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
+                        generatedDict['pressed'] += "        {button}['active'] = True\n".format(
+                                button=button_led, js=joy_side, led=led_name, side=led_side)
+                        
+                        # Add a timer to button
+                        generatedDict['pressed'] += "        timed_leds.append(".format(side=led_side) + '{ '
+                        generatedDict['pressed'] += "'side':'{side}', 'device':'{dev}', 'led':'{led}',".format(
+                                dev=device, led=led_name, side=led_side)
+                        generatedDict['pressed'] += "'button':'{nb}', 'button_side': '{s}', ".format(
+                                nb=btn, s=joy_side)
+                        generatedDict['pressed'] += "'timer': period * 2})\n"
+                        
+                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
+                    
+                
+            generated += generatedDict['header'] + generatedDict['comment']
+            generated += generatedDict['pressed_event'] + generatedDict['pressed']
+            generated += generatedDict['released_event'] + generatedDict['released']
+    
+    dprint( generated + "\n" )
+    
+
 
 # Do this, then
 # [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} 
@@ -336,304 +418,218 @@ RJoy = JDecorators['right']
 
 
 
+
 @LJoy.button(1)
 def handleButton( event, joy ):
-    dprint( 'Button ' + str(1) + ' pushed' )
+    btn = 1 # hold button
 
-    if BUTTONS['left'][1]['left']['H1']['active']:
-        dprint( 'Set LED H1 on left master to off.' )
-        BUTTONS['left'][1]['left']['H1']['active'] = False
-    else:
-        dprint( 'Set LED H1 on left master to on.' )
-        BUTTONS['left'][1]['left']['H1']['active'] = True
-    
-    to_update['left']['master'] = True
+    if event.is_pressed:
+        dprint('Button_' + str(btn) + ' led H1')
+        BUTTONS['left'][btn]['left']['H1']['active'] = True
+        to_update['left']['master'] = True
+        dprint('Button_' + str(btn) + ' led H2')
+        BUTTONS['left'][btn]['left']['H2']['active'] = True
+        to_update['left']['master'] = True
+        dprint('Button_' + str(btn) + ' led H3')
+        BUTTONS['left'][btn]['left']['H3']['active'] = True
+        to_update['left']['master'] = True
+        dprint('Button_' + str(btn) + ' led H4')
+        BUTTONS['left'][btn]['left']['H4']['active'] = True
+        to_update['left']['master'] = True
 
-    if BUTTONS['left'][1]['left']['H2']['active']:
-        dprint( 'Set LED H2 on left master to off.' )
-        BUTTONS['left'][1]['left']['H2']['active'] = False
     else:
-        dprint( 'Set LED H2 on left master to on.' )
-        BUTTONS['left'][1]['left']['H2']['active'] = True
-    
-    to_update['left']['master'] = True
+        BUTTONS['left'][btn]['left']['H1']['active'] = False
+        to_update['left']['master'] = True
+        BUTTONS['left'][btn]['left']['H2']['active'] = False
+        to_update['left']['master'] = True
+        BUTTONS['left'][btn]['left']['H3']['active'] = False
+        to_update['left']['master'] = True
+        BUTTONS['left'][btn]['left']['H4']['active'] = False
+        to_update['left']['master'] = True
 
-    if BUTTONS['left'][1]['left']['H3']['active']:
-        dprint( 'Set LED H3 on left master to off.' )
-        BUTTONS['left'][1]['left']['H3']['active'] = False
-    else:
-        dprint( 'Set LED H3 on left master to on.' )
-        BUTTONS['left'][1]['left']['H3']['active'] = True
-    
-    to_update['left']['master'] = True
-
-    if BUTTONS['left'][1]['left']['H4']['active']:
-        dprint( 'Set LED H4 on left master to off.' )
-        BUTTONS['left'][1]['left']['H4']['active'] = False
-    else:
-        dprint( 'Set LED H4 on left master to on.' )
-        BUTTONS['left'][1]['left']['H4']['active'] = True
-    
-    to_update['left']['master'] = True
 
 @LJoy.button(33)
 def handleButton( event, joy ):
+    btn = 33 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(33) + ' pushed' )
-    
-        if BUTTONS['left'][33]['left']['B1']['active']:
-            dprint( 'Set LED B1 on left slave to off.' )
-            BUTTONS['left'][33]['left']['B1']['active'] = False
-        else:
-            dprint( 'Set LED B1 on left slave to on.' )
-            BUTTONS['left'][33]['left']['B1']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B1')
+        BUTTONS['left'][btn]['left']['B1']['active'] = not BUTTONS['left'][btn]['left']['B1']['active']
         to_update['left']['slave'] = True
+
 
 @LJoy.button(34)
 def handleButton( event, joy ):
+    btn = 34 # timed button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(34) + ' pushed' )
-    
-        if BUTTONS['left'][34]['left']['B2']['active']:
-            dprint( 'Set LED B2 on left slave to off.' )
-            BUTTONS['left'][34]['left']['B2']['active'] = False
-        else:
-            dprint( 'Set LED B2 on left slave to on.' )
-            BUTTONS['left'][34]['left']['B2']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B2')
+        BUTTONS['left'][btn]['left']['B2']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B2','button':'34', 'button_side': 'left', 'timer': period * 2})
         to_update['left']['slave'] = True
+
 
 @LJoy.button(72)
 def handleButton( event, joy ):
+    btn = 72 # timed button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(72) + ' pushed' )
-    
-        if BUTTONS['left'][72]['left']['GearIndicator']['active']:
-            dprint( 'Set LED GearIndicator on left slave to off.' )
-            BUTTONS['left'][72]['left']['GearIndicator']['active'] = False
-        else:
-            dprint( 'Set LED GearIndicator on left slave to on.' )
-            BUTTONS['left'][72]['left']['GearIndicator']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led GearIndicator')
+        BUTTONS['left'][btn]['left']['GearIndicator']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'GearIndicator','button':'72', 'button_side': 'left', 'timer': period * 2})
         to_update['left']['slave'] = True
+
 
 @LJoy.button(74)
 def handleButton( event, joy ):
-    dprint( 'Button ' + str(74) + ' pushed' )
+    btn = 74 # hold button
 
-    if BUTTONS['left'][74]['left']['GearDownLeft']['active']:
-        dprint( 'Set LED GearDownLeft on left slave to off.' )
-        BUTTONS['left'][74]['left']['GearDownLeft']['active'] = False
-    else:
-        dprint( 'Set LED GearDownLeft on left slave to on.' )
-        BUTTONS['left'][74]['left']['GearDownLeft']['active'] = True
-    
-    to_update['left']['slave'] = True
+    if event.is_pressed:
+        dprint('Button_' + str(btn) + ' led GearDownLeft')
+        BUTTONS['left'][btn]['left']['GearDownLeft']['active'] = True
+        to_update['left']['slave'] = True
+        dprint('Button_' + str(btn) + ' led GearDownNose')
+        BUTTONS['left'][btn]['left']['GearDownNose']['active'] = True
+        to_update['left']['slave'] = True
+        dprint('Button_' + str(btn) + ' led GearDownRight')
+        BUTTONS['left'][btn]['left']['GearDownRight']['active'] = True
+        to_update['left']['slave'] = True
 
-    if BUTTONS['left'][74]['left']['GearDownNose']['active']:
-        dprint( 'Set LED GearDownNose on left slave to off.' )
-        BUTTONS['left'][74]['left']['GearDownNose']['active'] = False
     else:
-        dprint( 'Set LED GearDownNose on left slave to on.' )
-        BUTTONS['left'][74]['left']['GearDownNose']['active'] = True
-    
-    to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearDownLeft']['active'] = False
+        to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearDownNose']['active'] = False
+        to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearDownRight']['active'] = False
+        to_update['left']['slave'] = True
 
-    if BUTTONS['left'][74]['left']['GearDownRight']['active']:
-        dprint( 'Set LED GearDownRight on left slave to off.' )
-        BUTTONS['left'][74]['left']['GearDownRight']['active'] = False
-    else:
-        dprint( 'Set LED GearDownRight on left slave to on.' )
-        BUTTONS['left'][74]['left']['GearDownRight']['active'] = True
-    
-    to_update['left']['slave'] = True
 
 @LJoy.button(73)
 def handleButton( event, joy ):
-    dprint( 'Button ' + str(73) + ' pushed' )
+    btn = 73 # hold button
 
-    if BUTTONS['left'][73]['left']['GearUpNose']['active']:
-        dprint( 'Set LED GearUpNose on left slave to off.' )
-        BUTTONS['left'][73]['left']['GearUpNose']['active'] = False
-    else:
-        dprint( 'Set LED GearUpNose on left slave to on.' )
-        BUTTONS['left'][73]['left']['GearUpNose']['active'] = True
-    
-    to_update['left']['slave'] = True
+    if event.is_pressed:
+        dprint('Button_' + str(btn) + ' led GearUpNose')
+        BUTTONS['left'][btn]['left']['GearUpNose']['active'] = True
+        to_update['left']['slave'] = True
+        dprint('Button_' + str(btn) + ' led GearUpLeft')
+        BUTTONS['left'][btn]['left']['GearUpLeft']['active'] = True
+        to_update['left']['slave'] = True
+        dprint('Button_' + str(btn) + ' led GearUpRight')
+        BUTTONS['left'][btn]['left']['GearUpRight']['active'] = True
+        to_update['left']['slave'] = True
 
-    if BUTTONS['left'][73]['left']['GearUpLeft']['active']:
-        dprint( 'Set LED GearUpLeft on left slave to off.' )
-        BUTTONS['left'][73]['left']['GearUpLeft']['active'] = False
     else:
-        dprint( 'Set LED GearUpLeft on left slave to on.' )
-        BUTTONS['left'][73]['left']['GearUpLeft']['active'] = True
-    
-    to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearUpNose']['active'] = False
+        to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearUpLeft']['active'] = False
+        to_update['left']['slave'] = True
+        BUTTONS['left'][btn]['left']['GearUpRight']['active'] = False
+        to_update['left']['slave'] = True
 
-    if BUTTONS['left'][73]['left']['GearUpRight']['active']:
-        dprint( 'Set LED GearUpRight on left slave to off.' )
-        BUTTONS['left'][73]['left']['GearUpRight']['active'] = False
-    else:
-        dprint( 'Set LED GearUpRight on left slave to on.' )
-        BUTTONS['left'][73]['left']['GearUpRight']['active'] = True
-    
-    to_update['left']['slave'] = True
 
 @LJoy.button(42)
 def handleButton( event, joy ):
+    btn = 42 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(42) + ' pushed' )
-    
-        if BUTTONS['left'][42]['left']['B10']['active']:
-            dprint( 'Set LED B10 on left slave to off.' )
-            BUTTONS['left'][42]['left']['B10']['active'] = False
-        else:
-            dprint( 'Set LED B10 on left slave to on.' )
-            BUTTONS['left'][42]['left']['B10']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B10')
+        BUTTONS['left'][btn]['left']['B10']['active'] = not BUTTONS['left'][btn]['left']['B10']['active']
         to_update['left']['slave'] = True
+
 
 @LJoy.button(37)
 def handleButton( event, joy ):
+    btn = 37 # timed button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(37) + ' pushed' )
-    
-        if BUTTONS['left'][37]['left']['B5']['active']:
-            dprint( 'Set LED B5 on left slave to off.' )
-            BUTTONS['left'][37]['left']['B5']['active'] = False
-        else:
-            dprint( 'Set LED B5 on left slave to on.' )
-            BUTTONS['left'][37]['left']['B5']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B5')
+        BUTTONS['left'][btn]['left']['B5']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B5','button':'37', 'button_side': 'left', 'timer': period * 2})
         to_update['left']['slave'] = True
+
 
 @LJoy.button(39)
 def handleButton( event, joy ):
+    btn = 39 # timed button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(39) + ' pushed' )
-    
-        if BUTTONS['left'][39]['left']['B7']['active']:
-            dprint( 'Set LED B7 on left slave to off.' )
-            BUTTONS['left'][39]['left']['B7']['active'] = False
-        else:
-            dprint( 'Set LED B7 on left slave to on.' )
-            BUTTONS['left'][39]['left']['B7']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B7')
+        BUTTONS['left'][btn]['left']['B7']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'39', 'button_side': 'left', 'timer': period * 2})
         to_update['left']['slave'] = True
+
 
 @LJoy.button(41)
 def handleButton( event, joy ):
+    btn = 41 # timed button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(41) + ' pushed' )
-    
-        if BUTTONS['left'][41]['left']['B9']['active']:
-            dprint( 'Set LED B9 on left slave to off.' )
-            BUTTONS['left'][41]['left']['B9']['active'] = False
-        else:
-            dprint( 'Set LED B9 on left slave to on.' )
-            BUTTONS['left'][41]['left']['B9']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B9')
+        BUTTONS['left'][btn]['left']['B9']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B9','button':'41', 'button_side': 'left', 'timer': period * 2})
         to_update['left']['slave'] = True
+
 
 @RJoy.button(33)
 def handleButton( event, joy ):
+    btn = 33 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(33) + ' pushed' )
-    
-        if BUTTONS['right'][33]['right']['B1']['active']:
-            dprint( 'Set LED B1 on right slave to off.' )
-            BUTTONS['right'][33]['right']['B1']['active'] = False
-        else:
-            dprint( 'Set LED B1 on right slave to on.' )
-            BUTTONS['right'][33]['right']['B1']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B1')
+        BUTTONS['right'][btn]['right']['B1']['active'] = not BUTTONS['right'][btn]['right']['B1']['active']
         to_update['right']['slave'] = True
+
 
 @RJoy.button(34)
 def handleButton( event, joy ):
+    btn = 34 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(34) + ' pushed' )
-    
-        if BUTTONS['right'][34]['left']['B3']['active']:
-            dprint( 'Set LED B3 on left slave to off.' )
-            BUTTONS['right'][34]['left']['B3']['active'] = False
-        else:
-            dprint( 'Set LED B3 on left slave to on.' )
-            BUTTONS['right'][34]['left']['B3']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B2')
+        BUTTONS['right'][btn]['right']['B2']['active'] = not BUTTONS['right'][btn]['right']['B2']['active']
+        to_update['right']['slave'] = True
+        dprint('Button_' + str(btn) + ' led B3')
+        BUTTONS['right'][btn]['right']['B3']['active'] = not BUTTONS['right'][btn]['right']['B3']['active']
         to_update['right']['slave'] = True
 
-        if BUTTONS['right'][34]['right']['B2']['active']:
-            dprint( 'Set LED B2 on right slave to off.' )
-            BUTTONS['right'][34]['right']['B2']['active'] = False
-        else:
-            dprint( 'Set LED B2 on right slave to on.' )
-            BUTTONS['right'][34]['right']['B2']['active'] = True
-        
-        to_update['right']['slave'] = True
-
-        if BUTTONS['right'][34]['right']['B3']['active']:
-            dprint( 'Set LED B3 on right slave to off.' )
-            BUTTONS['right'][34]['right']['B3']['active'] = False
-        else:
-            dprint( 'Set LED B3 on right slave to on.' )
-            BUTTONS['right'][34]['right']['B3']['active'] = True
-        
-        to_update['right']['slave'] = True
 
 @RJoy.button(39)
 def handleButton( event, joy ):
+    btn = 39 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(39) + ' pushed' )
-    
-        if BUTTONS['right'][39]['right']['B7']['active']:
-            dprint( 'Set LED B7 on right slave to off.' )
-            BUTTONS['right'][39]['right']['B7']['active'] = False
-        else:
-            dprint( 'Set LED B7 on right slave to on.' )
-            BUTTONS['right'][39]['right']['B7']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B7')
+        BUTTONS['right'][btn]['right']['B7']['active'] = not BUTTONS['right'][btn]['right']['B7']['active']
         to_update['right']['slave'] = True
+
 
 @RJoy.button(42)
 def handleButton( event, joy ):
+    btn = 42 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(42) + ' pushed' )
-    
-        if BUTTONS['right'][42]['right']['B10']['active']:
-            dprint( 'Set LED B10 on right slave to off.' )
-            BUTTONS['right'][42]['right']['B10']['active'] = False
-        else:
-            dprint( 'Set LED B10 on right slave to on.' )
-            BUTTONS['right'][42]['right']['B10']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B10')
+        BUTTONS['right'][btn]['right']['B10']['active'] = not BUTTONS['right'][btn]['right']['B10']['active']
         to_update['right']['slave'] = True
+
 
 @RJoy.button(43)
 def handleButton( event, joy ):
+    btn = 43 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(43) + ' pushed' )
-    
-        if BUTTONS['right'][43]['right']['B11']['active']:
-            dprint( 'Set LED B11 on right slave to off.' )
-            BUTTONS['right'][43]['right']['B11']['active'] = False
-        else:
-            dprint( 'Set LED B11 on right slave to on.' )
-            BUTTONS['right'][43]['right']['B11']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B11')
+        BUTTONS['right'][btn]['right']['B11']['active'] = not BUTTONS['right'][btn]['right']['B11']['active']
         to_update['right']['slave'] = True
+
 
 @RJoy.button(44)
 def handleButton( event, joy ):
+    btn = 44 # toggle button
+
     if event.is_pressed:
-        dprint( 'Button ' + str(44) + ' pushed' )
-    
-        if BUTTONS['right'][44]['right']['B12']['active']:
-            dprint( 'Set LED B12 on right slave to off.' )
-            BUTTONS['right'][44]['right']['B12']['active'] = False
-        else:
-            dprint( 'Set LED B12 on right slave to on.' )
-            BUTTONS['right'][44]['right']['B12']['active'] = True
-        
+        dprint('Button_' + str(btn) + ' led B12')
+        BUTTONS['right'][btn]['right']['B12']['active'] = not BUTTONS['right'][btn]['right']['B12']['active']
         to_update['right']['slave'] = True
+
