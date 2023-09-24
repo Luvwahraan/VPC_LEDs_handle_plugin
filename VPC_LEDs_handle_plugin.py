@@ -1,10 +1,11 @@
 import gremlin
 from gremlin.user_plugin import *
-from plugins.plugins_stuff import *
 import sys
-
 import logging
 
+
+from plugins.plugins_stuff import *
+from data import ColorMap, LedNames
 
 period = 750 # ms
 # Periodic LEDs update is period/3 (250ms)
@@ -18,46 +19,6 @@ def dprint( string ):
     else:
         gremlin.util.log( string )
 
-colorMap = {
-      'off': 0b10000000,
-      'white-dim': 0b10010101,
-      'white-medium': 0b10101010,
-      'white-bright': 0b10111111,
-      'white': 0b10101010,
-      'red-dim': 0b10000001,
-      'red-medium': 0b10000010,
-      'red-bright': 0b10000011,
-      'red': 0b10000010,
-      'green-dim': 0b10000100,
-      'green-medium': 0b10001000,
-      'green-bright': 0b10001100,
-      'green': 0b10001000,
-      'blue-dim': 0b10010000,
-      'blue-medium': 0b10100000,
-      'blue-bright': 0b10110000,
-      'blue': 0b10100000,
-      'yellow-dim': 0b10000101,
-      'yellow-medium': 0b10001010,
-      'yellow-bright': 0b10001111,
-      'yellow': 0b10001010,
-      'magenta-dim': 0b10010001,
-      'magenta-medium': 0b10100010,
-      'magenta-bright': 0b10110011,
-      'magenta': 0b10100010,
-      'cyan-dim': 0b10010100,
-      'cyan-medium': 0b10101000,
-      'cyan-bright': 0b10111100,
-      'cyan': 0b10101000,
-      'orange': 0b10001011,
-      'salmon': 0b10011011,
-      'red-orange': 0b10000111,
-      'red-pink': 0b10010011,
-      'pink': 0b10100111,
-      'purple': 0b10110010,
-      'indigo': 0b10100001,
-      'light-blue': 0b10111010,
-      'lime-green': 0b10001110
-  }
 
 LEFT_GUID = '{FE8A3740-140F-11EE-8003-444553540000}'
 RIGHT_GUID = '{2E6F6CA0-141F-11EE-8005-444553540000}'
@@ -85,7 +46,7 @@ BUTTONS = {
         33: {                           # Physical joystick button number
             'right': {                  # LED side: on joystick self or right
                 'B1': {                 # Button name on panel or grip; see list above
-                    'color':'white-dim',# See colorMap{}
+                    'color':'white_dim',# See ColorMap
                     'device': 'slave',  # master or slave device
                     'active': False,    # True: led on, False led off
                     'type': 'toggle'    # toggle, hold, timed
@@ -95,34 +56,34 @@ BUTTONS = {
             },
         34: {
             'left': {
-                'B3': {'color':'white-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B3': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'right': {
-                'B2': {'color':'white-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-                'B3': {'color':'white-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B2': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B3': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
         },
         39: {
             'right': {
-                'B7': {'color':'yellow-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B7': {'color':'yellow_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'description': 'Quantum MODE'
         },
         42: {
             'right': {
-                'B10': {'color':'red-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B10': {'color':'red_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'description': 'Weapons power toggle'
         },
         43: {
             'right': {
-                'B11': {'color':'cyan-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B11': {'color':'cyan_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'description': 'Engine power toggle'
         },
         44: {
             'right': {
-                'B12': {'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                'B12': {'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'description': 'Shields power toggle'
         },
@@ -138,35 +99,35 @@ BUTTONS = {
         },
         33: {
             'left': {
-                 'B1': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
+                 'B1': { 'color': 'blue_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
             },
             'description': 'Lights toggle'
         },
         34: {
             'left': {
-                 'B2': { 'color': 'blue-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+                 'B2': { 'color': 'blue_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
             },
             'description': 'Call ATC'
         },
         72: {
             'left': {
-                 'GearIndicator': { 'color': 'red-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+                 'GearIndicator': { 'color': 'red_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
             },
             'description': 'Gears up / retract'
         },
         74: {
             'left': {
-                'GearDownLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearDownLeft': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearDownNose': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearDownRight': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
             },
             'description': 'Gears down'
         },
         73: {
             'left': {
-                'GearUpNose': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpLeft': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpRight': { 'color':'green-dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearUpNose': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearUpLeft': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
+                'GearUpRight': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
             },
             'description': 'Expand'
         },
@@ -195,7 +156,7 @@ BUTTONS = {
         },
         36: {
             'left': {
-                'B4': { 'color': 'yellow-dim', 'device': 'slave', 'active': False, 'type': 'timed' },
+                'B4': { 'color': 'yellow_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
             },
         },
     },
@@ -235,11 +196,11 @@ def buildReportFeature(side, slave=False ):
                     if BUTTONS[btn_side][btn][side][led_name]['device'] == device:
                         
                         if BUTTONS[btn_side][btn][side][led_name]['active']:
-                            color = colorMap[ BUTTONS[btn_side][btn][side][led_name]['color'] ]
+                            color = ColorMap.getValue( BUTTONS[btn_side][btn][side][led_name]['color'] )
                             #dprint( 'Coloring ' + str(color) )
                         else:
                             #dprint( 'Turning off' )
-                            color = colorMap['off']
+                            color = ColorMap.getValue('off')
                         
                         # Searching LED number to change
                         if slave and side == 'right':
@@ -390,8 +351,8 @@ def generateButtonEvents():
                     device = BUTTONS[joy_side][btn][led_side][led_name]['device']
                     
                     # Replace colorname by value
-                    color = colorMap[ BUTTONS[joy_side][btn][led_side][led_name]['color'] ]
-                    
+                    color = ColorMap.getValue([ BUTTONS[joy_side][btn][led_side][led_name]['color'] )
+                   
                     btype = BUTTONS[joy_side][btn][led_side][led_name]['type']
                     generatedDict['comment'] = " # {t} button\n".format(t=btype)
                         
