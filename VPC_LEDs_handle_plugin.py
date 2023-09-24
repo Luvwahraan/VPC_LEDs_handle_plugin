@@ -203,12 +203,16 @@ def buildReportFeature(side, slave=False ):
                             color = ColorMap.getValue('off')
                         
                         # Searching LED number to change
+                        joystick = ''
                         if slave and side == 'right':
-                            led_nb = panel1_leds.index( led_name ) + 5
-                        elif slave and side == btn_side:
-                            led_nb = panel2_leds.index( led_name ) + 5
+                            joystick = LedNames.panel1
+                        elif slave and side == 'left':
+                            joystick = LedNames.panel2
                         else:
-                            led_nb = grip_leds.index( led_name )
+                            joystick = LedNames.grip
+                        
+                        # Add 5 cause LEDs begins at byte 5 in feature report
+                        led_nb = LedNames.getLedNumber(led_name, joystick) + 5
                         
                         #dprint( '      updating led ' + str(led_nb) )
                         data[led_nb] = color
