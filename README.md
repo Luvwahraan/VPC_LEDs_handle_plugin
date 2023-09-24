@@ -26,7 +26,8 @@ In `VPC_LEDs_handle_plugin.py` file there is a dictionnary (`BUTTONS`) who assoc
 Just add data the correct way.
 
 Next you need to create a callback in this file for each button.
-You can do that by hand, but function `generateButtonEvents()` can generates that in Joystick Gremlin's log, so you can copy/paste the result, and removing dates. Maybe I will automatize that, but not for now.
+You can do that by hand, but function `generateButtonEvents()` can generates that in Joystick Gremlin's log, so you can copy/paste the result, and removing dates.
+Maybe I will automatize that, but not for now.
 
 
 ## That’s a JG plugin

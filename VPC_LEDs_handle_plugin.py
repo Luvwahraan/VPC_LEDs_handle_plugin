@@ -1,6 +1,6 @@
 import gremlin
 from gremlin.user_plugin import *
-from plugins_stuff import *
+from plugins.plugins_stuff import *
 import sys
 
 import logging
@@ -449,8 +449,7 @@ def generateButtonEvents():
 
 # Do this, then
 # [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} 
-generateButtonEvents()
-
+#generateButtonEvents()
 
 
 
@@ -608,9 +607,9 @@ def handleButton( event, joy ):
     btn = 41 # timed button
 
     if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B7')
-        BUTTONS['left'][btn]['left']['B7']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'41', 'button_side': 'left', 'timer': period * 2 })
+        dprint('Button_' + str(btn) + ' led B9')
+        BUTTONS['left'][btn]['left']['B9']['active'] = True
+        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B9','button':'41', 'button_side': 'left', 'timer': period * 2 })
         to_update['left']['slave'] = True
 
 
@@ -691,4 +690,3 @@ def handleButton( event, joy ):
         dprint('Button_' + str(btn) + ' led B12')
         BUTTONS['right'][btn]['right']['B12']['active'] = not BUTTONS['right'][btn]['right']['B12']['active']
         to_update['right']['slave'] = True
-
