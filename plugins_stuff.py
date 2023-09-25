@@ -222,13 +222,10 @@ class LED():
         self.colorName = colorName
         
     
-    __init__(self, name, side, colorName, device, active=False):
+    __init__(self, name, colorName, device, active=False):
     """
         name
             see led_names list
-            
-        side
-            left or right
             
         colorName
             see ColorMap
