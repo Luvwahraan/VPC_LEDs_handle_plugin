@@ -24,26 +24,26 @@ def getRandomColor():
 
 
 class Multi_Device_Handler():
-"""
-Handle multiple Virpil_device object.
+    """
+    Handle multiple Virpil_device object.
 
 
-Attributes
-----------
-_device
-    dictionnary: {
-        deviceName: {
-            device: Virpil_device,
-            connection: ConnectHandle,
-            threads: Thread,
-            }
-    }
+    Attributes
+    ----------
+    _device
+        dictionnary: {
+            deviceName: {
+                device: Virpil_device,
+                connection: ConnectHandle,
+                threads: Thread,
+                }
+        }
 
-Methods
--------
+    Methods
+    -------
 
 
-"""
+    """
 
     def __init__(self):
         self._devices = {}
@@ -52,10 +52,10 @@ Methods
         
     
     def addConnection(self, device_name, conn):
-    '''
-    device_name (str)
-    conn (ConnectHandle)
-    '''
+        '''
+        device_name (str)
+        conn (ConnectHandle)
+        '''
         
         # Search for wanted device, and store key (name).
         found_name = False
@@ -70,13 +70,13 @@ Methods
             raise NoConnectionError( name + 'not found in known devices' )
     
     def addDevice(self, device_name, device, conn=False):
-    '''
-    Store virpil device in a dict, by name.
-    
-    device_name (str)
-    device (Virpil_master or Virpil_slave)
-    conn (optionnal ConnectHandle)
-    '''
+        '''
+        Store virpil device in a dict, by name.
+        
+        device_name (str)
+        device (Virpil_master or Virpil_slave)
+        conn (optionnal ConnectHandle)
+        '''
         
         if not isinstance( device, Virpil_device ):
             raise BadClassType('Argument is not a Virpil_device: ' + str(type(device)) )

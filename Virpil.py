@@ -5,7 +5,7 @@ import socket
 import threading
 import traceback
 
-from data import LedNames, ColorMap
+from data import LedNames, ColorMap, LedBank
 from plugins_stuff import LED as LED
 
 class BadClassType(Exception):
@@ -57,9 +57,9 @@ class Virpil_device:
         
     Methods
     -------
-     createLedBank(buttonNames, value)
-        Create _led_bank dict, with LED names as keys.
-        Default value is LED off (black)
+     setLedBank(LedBank)
+        Set _led_bank.
+        See LedBank object
     setAllLeds(value)
         Set all LED with value.
 
@@ -69,7 +69,7 @@ class Virpil_device:
         self._slave = False
         self._is_slave = False
         self._is_master = False
-        self._led_bank = { }
+        self._led_bank = LedNames.getBank()
         self._hid_cmd = 0
         
         self._led_types = Device_Type( led_types )
@@ -93,33 +93,10 @@ class Virpil_device:
     
     def getLedBank(self):
         return self._led_bank
-        
     
-    def createLedBank(self, buttonNames, value=0b11000000):
-        """
-            Fill all led_bank with one value.
-            Need an ordered string list referring to LEDs, to make dictionnary.
-            Value is optionnal (turn off LEDs by default).
-        """
-        
-        # Do not try to create an empty led_bank
-        if len(buttonNames) < 1:
-            raise Exception("Can't create empty led_bank array.")
-        
-        # Raise exception if not valid
-        self.checkLedValue(value)
-        
-        # Todo check slave or master
-        device = 'slave'
-        
-        # Need a list
-        if isinstance(buttonNames, list):
-            for name in buttonNames:
-                self._led_bank[name] = LED(name, 'off', device)
-        else:
-            #print( buttonNames )
-            raise LEDBankExcept('buttonNames' + str( type(buttonNames) ) + 'list arg not valid.')
-        
+    def setLedBank(self, led_bank):
+        if not isinstance(led_bank, LedBank):
+            raise Exception("{s} is not a LedBank object.".format(s=led_bank) )
     
     def checkLedValue(self, value):
         if 0 <= value and value <= 255: # between 0b00000000 and 0b11111111
@@ -146,9 +123,7 @@ class Virpil_device:
         """
         
         # Create list
-        led_list = []        
-        for led in self._led_bank():
-            led_list.append( led.color )
+        led_list = self._led_bank.getValues()
         
         # Finish list if too short
         while len( led_list ) < 32:
@@ -157,8 +132,8 @@ class Virpil_device:
         return list(led_list)
         
     
-    def setAllLeds(self, value):
-        self.createLedBank( list(self._led_bank.keys()), value )
+    def setAllLeds(self, value='off'):
+        self._led_bank.setAllLeds(value)
     
 
 
@@ -224,7 +199,6 @@ class Virpil_master(Virpil_device):
         Need path or vendor_id/product_id couple.
         slave is optionnal Virpil_slave
         
-        Not implemented yet:
         This class can optionnaly starts client or server connection, but not both,
         in order to send or receive data to manage: pass server or client arg
         to True, with or without port.
@@ -345,7 +319,7 @@ class Virpil_Alpha_Prime(Virpil_master):
     
     def __init__(self, vendor_id=0, product_id=0, slave=0, server=False, client=False):
         Virpil_master.__init__(self, 'extra-leds', vendor_id=vendor_id, product_id=product_id, slave=slave)
-        Virpil_device.createLedBank(self, data.LedNames.grip)
+        Virpil_device.setLedBank(self, LedNames.alpha_prime)
         self.setCmd(0x68) # EXTRA_LEDS
         
     
@@ -360,7 +334,7 @@ class Virpil_Control_Panel_1(Virpil_slave):
     
     def __init__(self):
         Virpil_slave.__init__(self)
-        Virpil_device.createLedBank(self, data.LedNames.panel1)
+        Virpil_device.setLedBank(self, LedNames.panel1)
         
     
 
@@ -374,6 +348,6 @@ class Virpil_Control_Panel_2(Virpil_slave):
     
     def __init__(self):
         Virpil_slave.__init__(self)
-        Virpil_device.createLedBank(self, data.LedNames.panel2)
+        Virpil_device.setLedBank(self, LedNames.panel2)
         
     

@@ -3,14 +3,16 @@ import threading
 import sys
 import traceback
 
-from data import ColorMap, LedNames
-
 try:
     import gremlin
     from gremlin.user_plugin import *
     import logging
+    sys.path.append('plugins.VPC_LEDs_handle_plugin')
 except:
     pass
+    
+from data import ColorMap, LedNames
+
 
 def dprint( string ):
     if 'gremlin' not in sys.modules:
@@ -192,29 +194,24 @@ class Button():
             raise Exception( 'Bad type: ' + str(led) )
         
         self._led[ led.name ] = led
-    __init__(self, nb, side, btype='togle' description=''):
+        
+    def __init__(self, nb, side, btype='togle', description=''):
         if ( is_integer( nb ) and nb > 0 ):
             self.number = nb
         else:
-            raise Exception( 'Button number has to be a positive integer; '{v}' is not.'.format(v=nb) )
+            raise Exception( "Button number has to be a positive integer; '{v}' is not.".format(v=nb) )
         
-        self.side = _validatedSide(side)
-        self.btype = _validatedType(btype)
+        self.side = self._validatedSide(side)
+        self.btype = self._validatedType(btype)
         
         if description != '':
             self.description = str(description)
         
         # Need a list, but LED has to be unique.
-        _led = {}
+        self._led = {}
     
 
 class LED():
-    def _validatedSide(side):
-        if side == 'left' or side == 'right':
-            return side
-        else:
-            raise Exception( "Side has to be 'left' or 'right', not '{v}'".format(v=side) )
-        
     
     def changeColor(self, colorName):
         # Should throw an error if doesn't exist
@@ -222,24 +219,23 @@ class LED():
         self.colorName = colorName
         
     
-    __init__(self, name, colorName, device, active=False):
-    """
-        name
-            see led_names list
-            
-        colorName
-            see ColorMap
-            
-        device
-            what device the led is on: master or slave
-            
-        active (optional)
-            True when LED on, else False
-    """
-        self.side = _validatedSide(side)
+    def __init__(self, name, device, colorName='off', active=False):
+        """
+            name
+                see led_names list
+                
+            colorName
+                see ColorMap
+                
+            device
+                what device the led is on: master or slave
+                
+            active (optional)
+                True when LED on, else False
+        """
         self.device = device
         self.active = active
         
-        changeColor(colorName)
+        self.changeColor(colorName)
         
     

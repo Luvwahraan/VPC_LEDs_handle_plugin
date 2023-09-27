@@ -1,16 +1,9 @@
-import gremlin
-from gremlin.user_plugin import *
 import sys
 import logging
 
-
-from plugins.plugins_stuff import *
-from data import ColorMap, LedNames
-
-period = 750 # ms
-# Periodic LEDs update is period/3 (250ms)
-# Timers default time is period * 2, and decrease each period
-
+import gremlin
+from gremlin.user_plugin import *
+import logging
 mode_global = ModeVariable("Global", "gl")
 
 def dprint( string ):
@@ -19,203 +12,362 @@ def dprint( string ):
     else:
         gremlin.util.log( string )
 
+try:
+    from plugins_stuff import *
+    from data import LedNames, ColorMap, LED, LedBank
+except:
+    sys.path.append(sys.path[0]+'\\plugins\\VPC_LEDs_handle_plugin.')
+    from plugins_stuff import *
+    from data import LedNames, ColorMap, LED, LedBank
+    
+
+period = 750 # ms
+# Periodic LEDs update is period/3 (250ms)
+# Timers default time is period * 2, and decrease each period
+
+
 
 LEFT_GUID = '{FE8A3740-140F-11EE-8003-444553540000}'
 RIGHT_GUID = '{2E6F6CA0-141F-11EE-8005-444553540000}'
 
-grip_leds = [ 'S1', 'S2', 'S3', 'S4', 'S5', 'H1', 'H2', 'H3', 'H4' ]
-panel1_leds = [ 'B10', 'B11', 'B12', 'B7', 'B8', 'B9', 'B6', 'B4', 'B2', 'B5', 'B3', 'B1' ]
-panel2_leds = [
-        'B2', 'B1', 'B4', 'B3',
-        'GearUpNose', 'GearIndicator', 'GearUpLeft',
-        'GearDownLeft', 'GearDownNose', 'GearDownRight',
-        'GearUpRight',
-        'B10', 'B8', 'B6', 'B9', 'B7', 'B5' ]
+Joysticks = {
+    LEFT_GUID: {
+        'name': 'LJoy',
+        'decorator': gremlin.input_devices.JoystickDecorator(
+                "LEFT VPC AlphaP CP2",
+                LEFT_GUID,
+                mode_global.value ),
+        'banks': {
+            'master': LedNames.alpha_prime,
+            'slave': LedNames.panel2
+        },
+    },
+    RIGHT_GUID: {
+        'name': 'RJoy',
+        'decorator': gremlin.input_devices.JoystickDecorator(
+                "RIGHT VPC AlphaP CP1",
+                RIGHT_GUID,
+                mode_global.value ),
+        'banks': {
+            'master': LedNames.alpha_prime,
+            'slave': LedNames.panel1
+        },
+    },
+}
+    
+LJoy = Joysticks[LEFT_GUID]['decorator']
+RJoy = Joysticks[RIGHT_GUID]['decorator']
+
 
 # Periodic callback will update device setted to True
 to_update = {
-    'left': {'master': True, 'slave': True},
-    'right': {'master': True, 'slave': True}
+    RIGHT_GUID: {'master': True, 'slave': True},
+    LEFT_GUID: {'master': True, 'slave': True},
     }
 
 # Timed LED list
 timed_leds = []
 
 BUTTONS = {
-    'right': {                          # Physical joystick button side
-        33: {                           # Physical joystick button number
-            'right': {                  # LED side: on joystick self or right
-                'B1': {                 # Button name on panel or grip; see list above
-                    'color':'white_dim',# See ColorMap
-                    'device': 'slave',  # master or slave device
-                    'active': False,    # True: led on, False led off
-                    'type': 'toggle'    # toggle, hold, timed
-                    },
-                },
-            'description': 'Do thing'   # (optionnal)
-            },
+    RIGHT_GUID: { # Physical joystick guid
+        33: {                                   # Physical joystick button number
+            'description': 'Do thing',          # (optionnal)
+            'type':'toggle',                    # toggle, hold, timed
+            RIGHT_GUID: LedBank( [
+                    LED( name='B1',             # Button name on panel or grip; see list above
+                        number=LedNames.getLedNumber('B1',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,      # LED's joystick guid
+                        colorName='white-dim'   # See ColorMap
+                    ),
+                ],
+                slave=True ),
+        },
         34: {
-            'left': {
-                'B3': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'right': {
-                'B2': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-                'B3': {'color':'white_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
+            'type':'toggle',
+            RIGHT_GUID: LedBank( [
+                    LED( name='B3',
+                        number=LedNames.getLedNumber('B3',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='white-dim'
+                    ),
+                ],
+                slave=True ),
         },
         39: {
-            'right': {
-                'B7': {'color':'yellow_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'description': 'Quantum MODE'
+            'description': 'Quantum MODE',
+            'type':'toggle',
+            RIGHT_GUID: LedBank( [
+                    LED( name='B7',
+                        number=LedNames.getLedNumber('B7',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='yellow-dim'
+                    ),
+                ],
+                slave=True ),
         },
         42: {
-            'right': {
-                'B10': {'color':'red_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'description': 'Weapons power toggle'
+            'description': 'Weapons power toggle',
+            'type':'toggle',
+            RIGHT_GUID: LedBank( [
+                    LED( name='B10',
+                        number=LedNames.getLedNumber('B10',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='red-dim'
+                    ),
+                ],
+                slave=True ),
         },
         43: {
-            'right': {
-                'B11': {'color':'cyan_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'description': 'Engine power toggle'
+            'description': 'Engine power toggle',
+            'type':'toggle',
+            RIGHT_GUID: LedBank( [
+                    LED( name='B11',
+                        number=LedNames.getLedNumber('B11',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='cyan-dim'
+                    ),
+                ],
+                slave=True ),
         },
         44: {
-            'right': {
-                'B12': {'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'description': 'Shields power toggle'
+            'description': 'Shields power toggle',
+            'type':'toggle',
+            RIGHT_GUID: LedBank( [
+                    LED( name='B12',
+                        number=LedNames.getLedNumber('B12',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='green-dim'
+                    ),
+                ],
+                slave=True ),
         },
     },
-    'left': {
+    LEFT_GUID: {
         1: {
-            'left': {
-                'H1': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H2': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H3': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-                'H4': { 'color':'red', 'device': 'master', 'active': False, 'type': 'hold' },
-            }
+            'description': 'Fire 1 active',
+            'type':'hold',
+            LEFT_GUID: LedBank( [
+                    LED( name='H1',
+                        number=LedNames.getLedNumber('H1',Joysticks[LEFT_GUID]['banks']['master']),
+                        device=LEFT_GUID,
+                        slave=False,
+                        colorName='red'
+                    ),
+                ],
+                slave=False ),
+            LEFT_GUID: LedBank( [
+                    LED( name='H3',
+                        number=LedNames.getLedNumber('H3',Joysticks[LEFT_GUID]['banks']['master']),
+                        device=LEFT_GUID,
+                        slave=False,
+                        colorName='red'
+                    ),
+                ],
+                slave=False ),
         },
         33: {
-            'left': {
-                 'B1': { 'color': 'blue_dim', 'device': 'slave', 'active': False, 'type': 'toggle' },
-            },
-            'description': 'Lights toggle'
+            'description': 'Lights toggle',
+            'type':'toggle',
+            LEFT_GUID: LedBank( [
+                    LED( name='B1',
+                        number=LedNames.getLedNumber('B1',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='blue-dim'
+                    ),
+                ],
+                slave=True ),
         },
         34: {
-            'left': {
-                 'B2': { 'color': 'blue_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-            'description': 'Call ATC'
+            'description': 'Call ATC',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='B2',
+                        number=LedNames.getLedNumber('B2',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='blue-dim'
+                    ),
+                ],
+                slave=True ),
         },
         72: {
-            'left': {
-                 'GearIndicator': { 'color': 'red_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-            'description': 'Gears up / retract'
+            'description': 'Gears up / retract',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='GearIndicator',
+                        number=LedNames.getLedNumber('GearIndicator',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='red-dim'
+                    ),
+                ],
+                slave=True ),
         },
         74: {
-            'left': {
-                'GearDownLeft': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownNose': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearDownRight': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-            },
-            'description': 'Gears down'
+            'description': 'Gears down',
+            'type':'hold',
+            LEFT_GUID: LedBank( [
+                    LED( name='GearDownLeft',
+                        number=LedNames.getLedNumber('GearDownLeft',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                    LED( name='GearDownNose',
+                        number=LedNames.getLedNumber('GearDownNose',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                    LED( name='GearDownRight',
+                        number=LedNames.getLedNumber('GearDownRight',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                ],
+                slave=True ),
         },
         73: {
-            'left': {
-                'GearUpNose': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpLeft': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-                'GearUpRight': { 'color':'green_dim', 'device': 'slave', 'active': False, 'type': 'hold' },
-            },
-            'description': 'Expand'
+            'description': 'Expand',
+            'type':'hold',
+            LEFT_GUID: LedBank( [
+                    LED( name='GearUpLeft',
+                        number=LedNames.getLedNumber('GearUpLeft',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                    LED( name='GearUpNose',
+                        number=LedNames.getLedNumber('GearUpNose',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                    LED( name='GearUpRight',
+                        number=LedNames.getLedNumber('GearUpRight',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='green-dim'
+                    ),
+                ],
+                slave=True ),
         },
         42: {
-            'left': {
-                 'B10': { 'color': 'red', 'device': 'slave', 'active': False, 'type': 'toggle' },
-                },
-        },
-        37: {
-            'left': {
-                'B5': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-            'description': 'Turret 1'
-        },
-        39: {
-            'left': {
-                'B7': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-            'description': 'Turret 2'
-        },
-        41: {
-            'left': {
-                'B9': { 'color': 'yellow', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
-            'description': 'Turret 3'
+            'type':'toggle',
+            LEFT_GUID: LedBank( [
+                    LED( name='B10',
+                        number=LedNames.getLedNumber('B10',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='red'
+                    ),
+                ],
+                slave=True ),
         },
         36: {
-            'left': {
-                'B4': { 'color': 'yellow_dim', 'device': 'slave', 'active': False, 'type': 'timed' },
-            },
+            'description':'Seat out',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='B4',
+                        number=LedNames.getLedNumber('B4',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='yellow-dim'
+                    ),
+                ],
+                slave=True ),
+        },
+        37: {
+            'description': 'Turret 1',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='B5',
+                        number=LedNames.getLedNumber('B5',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='yellow-dim'
+                    ),
+                ],
+                slave=True ),
+        },
+        39: {
+            'description': 'Turret 2',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='B7',
+                        number=LedNames.getLedNumber('B7',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='yellow-dim'
+                    ),
+                ],
+                slave=True ),
+        },
+        41: {
+            'description': 'Turret 3',
+            'type':'timed',
+            LEFT_GUID: LedBank( [
+                    LED( name='B9',
+                        number=LedNames.getLedNumber('B9',Joysticks[LEFT_GUID]['banks']['slave']),
+                        device=LEFT_GUID,
+                        colorName='yellow-dim'
+                    ),
+                ],
+                slave=True ),
+            RIGHT_GUID: LedBank( [
+                    LED( name='B8',
+                        number=LedNames.getLedNumber('B8',Joysticks[RIGHT_GUID]['banks']['slave']),
+                        device=RIGHT_GUID,
+                        colorName='salmon'
+                    ),
+                ],
+                slave=True ),
         },
     },
 }
 
 
-def buildReportFeature(side, slave=False ):
+def buildReportFeature(led_js_guid, slave=False ):
     data = [0x02]
     
     if slave:
-        device = 'slave'
         data += [0x67, 0x00, 0x00, 0x00]
         data += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
     else:
-        device = 'master'
         data += [0x68, 0x00, 0x00, 0x00]
         data += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
     
     data.append(0xf0)
 
-    #dprint( 'Building empty for ' + device + ' ' + str(data) )
+    #dprint( 'Building empty for ' + led_js_guid )
     
-    # For both left and right joystick's buttons
-    for btn_side in BUTTONS.keys():
-        #dprint( '  list side ' + btn_side )
+    # Searching for led_js_guid's LED in all joystick's buttons...
+    for btn_js_guid in BUTTONS.keys():
+        #dprint( '  list joystick by guid ' + btn_js_guid )
         
-        # browse setted buttons
-        for btn in BUTTONS[btn_side].keys():
+        for btn in BUTTONS[btn_js_guid].keys():
             #dprint( '    button_' + str( btn ) )
             
             try:
-                for led_name in BUTTONS[btn_side][btn][side]:
-                    #dprint( '      led ' + led_name )
+                if led_js_guid in BUTTONS[btn_js_guid][btn]:
+                    #dprint( "      led_js_guid "+str(led_js_guid) )
                     
-                    # but only for master or slave, one at a time
-                    if BUTTONS[btn_side][btn][side][led_name]['device'] == device:
+                    for led in BUTTONS[btn_js_guid][btn][led_js_guid].bank.values():
+                        #dprint( "        led "+led.name )
+                        #dprint( "        LedBank "+str(BUTTONS[btn_js_guid][btn][led_js_guid].__dict__.keys()) )
                         
-                        if BUTTONS[btn_side][btn][side][led_name]['active']:
-                            color = ColorMap.getValue( BUTTONS[btn_side][btn][side][led_name]['color'] )
-                            #dprint( 'Coloring ' + str(color) )
-                        else:
-                            #dprint( 'Turning off' )
-                            color = ColorMap.getValue('off')
-                        
-                        # Searching LED number to change
-                        joystick = ''
-                        if slave and side == 'right':
-                            joystick = LedNames.panel1
-                        elif slave and side == 'left':
-                            joystick = LedNames.panel2
-                        else:
-                            joystick = LedNames.grip
-                        
-                        # Add 5 cause LEDs begins at byte 5 in feature report
-                        led_nb = LedNames.getLedNumber(led_name, joystick) + 5
-                        
-                        #dprint( '      updating led ' + str(led_nb) )
-                        data[led_nb] = color
+                        # ... but only for master or slave
+                        if BUTTONS[btn_js_guid][btn][led_js_guid].slave == slave:
+                            
+                            if led.active:
+                                color = led.color
+                                #dprint( 'Coloring ' + str(color) )
+                            else:
+                                #dprint( 'Turning off' )
+                                color = ColorMap.getValue('off')
+                            
+                            # Searching LED number to change
+                            if slave:
+                                ms_type = 'slave'
+                            else:
+                                ms_type = 'master'
+                            joystick = Joysticks[led_js_guid]['banks'][ms_type]
+                            
+                            # Add 5 cause LEDs begins at byte 5 in feature report
+                            led_nb = LedNames.getLedNumber(led.name, joystick) + 5
+                            
+                            #dprint( '      updating led ' + str(led_nb) )
+                            data[led_nb] = color
             except:
                 #dprint( traceback.format_exc() )
                 pass
@@ -223,21 +375,9 @@ def buildReportFeature(side, slave=False ):
     return data
 
 sock_clients = {
-    'left': ConnectHandle( client=True, port=14517 ),
-    'right': ConnectHandle( client=True, port=14518 )
+    LEFT_GUID: ConnectHandle( client=True, port=14517 ),
+    RIGHT_GUID: ConnectHandle( client=True, port=14518 )
     }
-
-JDecorators = {
-    'left': gremlin.input_devices.JoystickDecorator(
-            "LEFT VPC AlphaP CP2",
-            LEFT_GUID,
-            mode_global.value ),
-    'right': gremlin.input_devices.JoystickDecorator(
-            "RIGHT VPC AlphaP CP1",
-            RIGHT_GUID,
-            mode_global.value )
-    }
-
 
 
 
@@ -252,21 +392,24 @@ def checkTimed():
         pass
     
     to_delete = []
-    
-    for led_nb in range( len(timed_leds) ):            
-        joy_side = timed_leds[led_nb]['button_side']
-        button = int(timed_leds[led_nb]['button'])
-        led_side = timed_leds[led_nb]['side']
-        led_name = timed_leds[led_nb]['led']
-        led_dev = timed_leds[led_nb]['device']
-        
-        if timed_leds[led_nb]['timer'] > 0:
-            timed_leds[led_nb]['timer'] -= period
-        else:
-            dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(b=button,s=joy_side,l=led_name,sl=led_side) )
-            BUTTONS[joy_side][button][led_side][led_name]['active'] = False
-            to_update[led_side][led_dev] = True
-            to_delete.append( led_nb )
+    try:
+        for led_nb in range( len(timed_leds) ):
+            btn_js_guid = timed_leds[led_nb]['button_js_guid']
+            button = int(timed_leds[led_nb]['button'])
+            led_js_guid = timed_leds[led_nb]['led_js_guid']
+            led_name = timed_leds[led_nb]['led']
+            led_dev = timed_leds[led_nb]['device']
+            
+            if timed_leds[led_nb]['timer'] > 0:
+                timed_leds[led_nb]['timer'] -= period
+            else:
+                dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(b=button,s=btn_js_guid,l=led_name,sl=led_js_guid) )
+                BUTTONS[btn_js_guid][button][led_js_guid].bank[led_name].active = False
+                to_update[led_js_guid][led_dev] = True
+                to_delete.append( led_nb )
+    except:
+        dprint( traceback.format_exc() )
+        pass
         
     if len( to_delete ) > 0:
         to_delete.sort(reverse=True)
@@ -278,135 +421,175 @@ def checkTimed():
 def checkUpdates():
     #dprint('Periodic callback' + str(to_update) )
     
-    for side in to_update.keys():
-        ThisJoy = JDecorators[side]
+    for js_guid_update in to_update.keys():
+        ThisJoy = Joysticks[js_guid_update]['decorator']
         
-        for device in to_update[side].keys():
+        for device_type in to_update[js_guid_update].keys():
         
             # Update buttons who have to
-            if to_update[side][device]:
-                #dprint('Periodic callback update: ' + side + ' ' + device )
+            if to_update[js_guid_update][device_type]:
+                #dprint('Periodic callback update: ' + js_guid_update + ' ' + device_type )
                 
-                if device == 'slave':
+                if device_type == 'slave':
                     slave_device = True
                 else:
                     slave_device = False
                 
                 try:
-                    #dprint('Try to build data for ' + device)
-                    report_feature = buildReportFeature(side, slave=slave_device)
+                    #dprint('Try to build data for ' + device_type)
+                    report_feature = buildReportFeature(js_guid_update, slave=slave_device)
                     
-                    dprint('Sending feature for ' + side + ' ' + device + ':' + str(report_feature) + ' on port ' + str( sock_clients[side].getPort() ) )
-                    sock_clients[side].clientSend( bytes(report_feature) )
+                    dprint('Sending feature for ' + js_guid_update + ' ' + device_type + ':' + str(report_feature) + ' on port ' + str( sock_clients[js_guid_update].getPort() ) )
+                    sock_clients[js_guid_update].clientSend( bytes(report_feature) )
                     
-                    # We don't need to do this until next update
-                    to_update[side][device] = False
+                    # We don't need to update until next change
+                    to_update[js_guid_update][device_type] = False
                 except:
-                    #dprint( traceback.format_exc() )
+                    dprint( traceback.format_exc() )
                     pass
             
         
     
 
 
-LJoy = JDecorators['left']
-RJoy = JDecorators['right']
 
 
 def generateButtonEvents():
     generated = ''
     generatedDict = {
-        'header': '',
-        'comment': '',
         'pressed_event': '',
         'pressed': '',
         'released_event': '',
         'released': '',
-        'description': '',
     }
     
-    for joy_side in ['left','right']:
-        thisJoy = ''
-        if joy_side == 'left':
-            thisJoy = 'LJoy'
-        elif joy_side == 'right':
-            thisJoy = 'RJoy'
+    for btn_js_guid in Joysticks.keys():
+        thisJoy = Joysticks[btn_js_guid]['name']
+        generatedDict['guid'] = "    btn_js_guid = '{g}'\n".format(g=btn_js_guid)
     
-        for btn in BUTTONS[joy_side].keys():
+        for btn in BUTTONS[btn_js_guid].keys():
             generatedDict['header'] = "@{j}.button({nb})\n".format(j=thisJoy, nb=btn)
             generatedDict['header'] += "def handleButton( event, joy ):\n    btn = {nb}".format(nb=btn)
             
-            generatedDict['description'] = ''
+            if 'description' in BUTTONS[btn_js_guid][btn]:
+                generated += "\n\n# "+ BUTTONS[btn_js_guid][btn]['description'] + "\n"
+            else:
+                generated += "\n\n"
             
-            for led_side in BUTTONS[joy_side][btn].keys():
+            generated += generatedDict['header']
             
-                if led_side == 'description':
-                    generatedDict['description'] = '# ' + BUTTONS[joy_side][btn][led_side] + "\n"
-                    break
+            btype = BUTTONS[btn_js_guid][btn]['type']
+            generated += " # {t} button\n\n".format(t=btype)
             
-                generatedDict['pressed_event'] = ''
-                generatedDict['pressed'] = ''
-                generatedDict['released_event'] = ''
-                generatedDict['released'] = ''
+            events_str = {
+                    'pressed_event': {
+                        'events':[],
+                        'updates':{},
+                        'vars':[],
+                    },
+                    'released_event': {
+                        'events':[],
+                        'updates':{},
+                        'vars':[],
+                    },
+            }
+            
+            for led_js_guid in BUTTONS[btn_js_guid][btn].keys():
+            
+                #dprint( "Generating for {bg}:{b} -> {lg} ".format(
+                #        bg=btn_js_guid,b=btn,lg=led_js_guid) )
+                #dprint( "Generating for {b}".format(b=btn) )
                 
-                for led_name in BUTTONS[joy_side][btn][led_side].keys():
-                    generatedDict['comment'] = ''
+                if isinstance( BUTTONS[btn_js_guid][btn][led_js_guid], LedBank):
+                    generatedDict['pressed_event'] = ''
+                    generatedDict['pressed'] = ''
+                    generatedDict['released_event'] = ''
+                    generatedDict['released'] = ''
                     
-                    device = BUTTONS[joy_side][btn][led_side][led_name]['device']
+                    events_str['pressed_event']['vars'].append(f"    guid_btn = '{btn_js_guid}'\n")
                     
-                    # Replace colorname by value
-                    color = ColorMap.getValue([ BUTTONS[joy_side][btn][led_side][led_name]['color'] )
-                   
-                    btype = BUTTONS[joy_side][btn][led_side][led_name]['type']
-                    generatedDict['comment'] = " # {t} button\n".format(t=btype)
+                    for led in BUTTONS[btn_js_guid][btn][led_js_guid].bank.values():
+                        #dprint("\t Lets go doing "+led.name)
                         
-                    button_led = "BUTTONS['{js}'][btn]['{side}']['{led}']".format(
-                            js=joy_side, led=led_name, side=led_side)
-                    
-                    value = "BUTTONS['{js}'][btn]['{side}']['{led}']['active']".format(
-                            nb=btn, js=joy_side, led=led_name, side=led_side )
+                        events_str['pressed_event']['vars'].append(f"    guid_led_{led.name} = '{led.device}'\n")
+                        
+
+                        
+                        # LedBank is for master or slave device?
+                        led_dev = 'master'
+                        if BUTTONS[btn_js_guid][btn][led_js_guid].slave:
+                            led_dev = 'slave'
+                        
+                        # Shorter to write, more readable. ;)
+                        button = f"BUTTONS[guid_btn][btn][guid_led_{led.name}].bank['{led.name}']"
+                        events_str['pressed_event']['vars'].append( f"    btn_{led.name} = {button}\n" )
+                        
+                        if btype == 'toggle':
+                            string = f"        btn_{led.name}.active = not btn_{led.name}.active\n\n"
+                            events_str['pressed_event']['events'].append(string)
+                            events_str['pressed_event']['updates'][led_js_guid] = led_dev
                             
-                    generatedDict['pressed'] += "        dprint('Button_' + str(btn) + "
-                    generatedDict['pressed'] += "' led {led}')\n".format(led=led_name)
-                    
-                    if btype == 'toggle':
-                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
-                        generatedDict['pressed'] += "        {button}['active'] = not {val}\n".format(
-                                button=button_led, val=value)
-                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
-                        
-                    elif btype == 'hold':
-                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
-                        generatedDict['pressed'] += "        {button}['active'] = True\n".format(
-                                button=button_led, js=joy_side, led=led_name, side=led_side)
-                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
-                        
-                        generatedDict['released_event'] = "\n    else:\n"
-                        generatedDict['released'] += "        {button}['active'] = False\n".format(
-                                button=button_led, js=joy_side, led=led_name, side=led_side)
-                        generatedDict['released'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
-                        
-                    elif btype == 'timed':
-                        generatedDict['pressed_event'] = "\n    if event.is_pressed:\n"
-                        generatedDict['pressed'] += "        {button}['active'] = True\n".format(
-                                button=button_led, js=joy_side, led=led_name, side=led_side)
-                        
-                        # Add a timer to button
-                        generatedDict['pressed'] += "        timed_leds.append(".format(side=led_side) + '{ '
-                        generatedDict['pressed'] += "'side':'{side}', 'device':'{dev}', 'led':'{led}',".format(
-                                dev=device, led=led_name, side=led_side)
-                        generatedDict['pressed'] += "'button':'{nb}', 'button_side': '{s}', ".format(
-                                nb=btn, s=joy_side)
-                        generatedDict['pressed'] += "'timer': period * 2"
-                        generatedDict['pressed'] += " })\n"
-                        
-                        generatedDict['pressed'] += "        to_update['{js}']['{dev}'] = True\n".format(js=joy_side, dev=device)
-                    
+                            #dprint( "\t\ttoggle led is "+led_dev )
+                            
+                        elif btype == 'hold':
+                            string = f"        btn_{led.name}.active = True\n"
+                            events_str['pressed_event']['events'].append(string)
+                            events_str['pressed_event']['updates'][led_js_guid] = led_dev
+                            
+                            string = f"        btn_{led.name}.active = False\n\n"
+                            events_str['released_event']['events'].append(string)
+                            events_str['released_event']['updates'][led_js_guid] = led_dev
+                            
+                            #dprint( "\t\thold led" )
+                            
+                        elif btype == 'timed':
+                            string = f"        btn_{led.name}.active = True\n"
+                            
+                            # Add a timer to button
+                            string += "        timed_leds.append({ "
+                            string += "'led_js_guid':guid_led_{l}, 'device':'{d}', 'led':'{l}',".format(
+                                    d=led_dev, l=led.name)
+                            string += f"'button':'{btn}',\n                'button_js_guid': guid_btn, "
+                            string += "'timer': period * 2 })\n\n"
+                            
+                            events_str['pressed_event']['events'].append(string)
+                            events_str['pressed_event']['updates'][led_js_guid] = led_dev
+                            
+                            #dprint( "\t\ttimed led" )
                 
-            generated += "\n\n" + generatedDict['description']
-            generated += generatedDict['header'] + generatedDict['comment']
-            generated += generatedDict['pressed_event'] + generatedDict['pressed']
-            generated += generatedDict['released_event'] + generatedDict['released']
+            #generated += generatedDict['pressed_event'] + generatedDict['pressed']
+            #generated += generatedDict['released_event'] + generatedDict['released']
+            
+            for e in events_str.keys():
+                #dprint( e )
+                
+                # Don't do anything if there is no event to add.
+                if len( events_str[e]['events'] ) > 0:
+                    
+                    # First add all leds vars
+                    for s in events_str[e]['vars']:
+                        #dprint( s )
+                        generated += s
+                        
+                    # Next event condition
+                    if e == 'pressed_event':
+                        generated += "\n    if event.is_pressed:\n"
+                    elif e == 'released_event':
+                        generated += "\n    else:\n"
+                    
+                    
+                    # Then add all buttons
+                    for s in events_str[e]['events']:
+                        #dprint( s )
+                        generated += s
+                    
+                    # And all led updates for this event
+                    for k,v in events_str[e]['updates'].items():
+                        #dprint(f"in loop: {k}:{v}")
+                        s = "        to_update['{g}']['{d}'] = True\n".format(
+                                        g=k,d=v)
+                        #dprint( s )
+                        generated += s
     
     dprint( generated + "\n" )
     
@@ -414,244 +597,6 @@ def generateButtonEvents():
 
 # Do this, then
 # [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} 
-#generateButtonEvents()
+generateButtonEvents()
 
 
-
-@LJoy.button(1)
-def handleButton( event, joy ):
-    btn = 1 # hold button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led H1')
-        BUTTONS['left'][btn]['left']['H1']['active'] = True
-        to_update['left']['master'] = True
-        dprint('Button_' + str(btn) + ' led H2')
-        BUTTONS['left'][btn]['left']['H2']['active'] = True
-        to_update['left']['master'] = True
-        dprint('Button_' + str(btn) + ' led H3')
-        BUTTONS['left'][btn]['left']['H3']['active'] = True
-        to_update['left']['master'] = True
-        dprint('Button_' + str(btn) + ' led H4')
-        BUTTONS['left'][btn]['left']['H4']['active'] = True
-        to_update['left']['master'] = True
-
-    else:
-        BUTTONS['left'][btn]['left']['H1']['active'] = False
-        to_update['left']['master'] = True
-        BUTTONS['left'][btn]['left']['H2']['active'] = False
-        to_update['left']['master'] = True
-        BUTTONS['left'][btn]['left']['H3']['active'] = False
-        to_update['left']['master'] = True
-        BUTTONS['left'][btn]['left']['H4']['active'] = False
-        to_update['left']['master'] = True
-
-
-# Lights toggle
-@LJoy.button(33)
-def handleButton( event, joy ):
-    btn = 33 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B1')
-        BUTTONS['left'][btn]['left']['B1']['active'] = not BUTTONS['left'][btn]['left']['B1']['active']
-        to_update['left']['slave'] = True
-
-
-# Call ATC
-@LJoy.button(34)
-def handleButton( event, joy ):
-    btn = 34 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B2')
-        BUTTONS['left'][btn]['left']['B2']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B2','button':'34', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-# Gears up / retract
-@LJoy.button(72)
-def handleButton( event, joy ):
-    btn = 72 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led GearIndicator')
-        BUTTONS['left'][btn]['left']['GearIndicator']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'GearIndicator','button':'72', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-# Gears down
-@LJoy.button(74)
-def handleButton( event, joy ):
-    btn = 74 # hold button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led GearDownLeft')
-        BUTTONS['left'][btn]['left']['GearDownLeft']['active'] = True
-        to_update['left']['slave'] = True
-        dprint('Button_' + str(btn) + ' led GearDownNose')
-        BUTTONS['left'][btn]['left']['GearDownNose']['active'] = True
-        to_update['left']['slave'] = True
-        dprint('Button_' + str(btn) + ' led GearDownRight')
-        BUTTONS['left'][btn]['left']['GearDownRight']['active'] = True
-        to_update['left']['slave'] = True
-
-    else:
-        BUTTONS['left'][btn]['left']['GearDownLeft']['active'] = False
-        to_update['left']['slave'] = True
-        BUTTONS['left'][btn]['left']['GearDownNose']['active'] = False
-        to_update['left']['slave'] = True
-        BUTTONS['left'][btn]['left']['GearDownRight']['active'] = False
-        to_update['left']['slave'] = True
-
-
-# Expand
-@LJoy.button(73)
-def handleButton( event, joy ):
-    btn = 73 # hold button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led GearUpNose')
-        BUTTONS['left'][btn]['left']['GearUpNose']['active'] = True
-        to_update['left']['slave'] = True
-        dprint('Button_' + str(btn) + ' led GearUpLeft')
-        BUTTONS['left'][btn]['left']['GearUpLeft']['active'] = True
-        to_update['left']['slave'] = True
-        dprint('Button_' + str(btn) + ' led GearUpRight')
-        BUTTONS['left'][btn]['left']['GearUpRight']['active'] = True
-        to_update['left']['slave'] = True
-
-    else:
-        BUTTONS['left'][btn]['left']['GearUpNose']['active'] = False
-        to_update['left']['slave'] = True
-        BUTTONS['left'][btn]['left']['GearUpLeft']['active'] = False
-        to_update['left']['slave'] = True
-        BUTTONS['left'][btn]['left']['GearUpRight']['active'] = False
-        to_update['left']['slave'] = True
-
-
-@LJoy.button(42)
-def handleButton( event, joy ):
-    btn = 42 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B10')
-        BUTTONS['left'][btn]['left']['B10']['active'] = not BUTTONS['left'][btn]['left']['B10']['active']
-        to_update['left']['slave'] = True
-
-
-# Turret 1
-@LJoy.button(37)
-def handleButton( event, joy ):
-    btn = 37 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B5')
-        BUTTONS['left'][btn]['left']['B5']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B5','button':'37', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-# Turret 2
-@LJoy.button(39)
-def handleButton( event, joy ):
-    btn = 39 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B7')
-        BUTTONS['left'][btn]['left']['B7']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B7','button':'39', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-# Turret 3
-@LJoy.button(41)
-def handleButton( event, joy ):
-    btn = 41 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B9')
-        BUTTONS['left'][btn]['left']['B9']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B9','button':'41', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-@LJoy.button(36)
-def handleButton( event, joy ):
-    btn = 36 # timed button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B4')
-        BUTTONS['left'][btn]['left']['B4']['active'] = True
-        timed_leds.append({ 'side':'left', 'device':'slave', 'led':'B4','button':'36', 'button_side': 'left', 'timer': period * 2 })
-        to_update['left']['slave'] = True
-
-
-# Do thing
-@RJoy.button(33)
-def handleButton( event, joy ):
-    btn = 33 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B1')
-        BUTTONS['right'][btn]['right']['B1']['active'] = not BUTTONS['right'][btn]['right']['B1']['active']
-        to_update['right']['slave'] = True
-
-
-@RJoy.button(34)
-def handleButton( event, joy ):
-    btn = 34 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B2')
-        BUTTONS['right'][btn]['right']['B2']['active'] = not BUTTONS['right'][btn]['right']['B2']['active']
-        to_update['right']['slave'] = True
-        dprint('Button_' + str(btn) + ' led B3')
-        BUTTONS['right'][btn]['right']['B3']['active'] = not BUTTONS['right'][btn]['right']['B3']['active']
-        to_update['right']['slave'] = True
-
-
-# Quantum MODE
-@RJoy.button(39)
-def handleButton( event, joy ):
-    btn = 39 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B7')
-        BUTTONS['right'][btn]['right']['B7']['active'] = not BUTTONS['right'][btn]['right']['B7']['active']
-        to_update['right']['slave'] = True
-
-
-# Weapons power toggle
-@RJoy.button(42)
-def handleButton( event, joy ):
-    btn = 42 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B10')
-        BUTTONS['right'][btn]['right']['B10']['active'] = not BUTTONS['right'][btn]['right']['B10']['active']
-        to_update['right']['slave'] = True
-
-
-# Engine power toggle
-@RJoy.button(43)
-def handleButton( event, joy ):
-    btn = 43 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B11')
-        BUTTONS['right'][btn]['right']['B11']['active'] = not BUTTONS['right'][btn]['right']['B11']['active']
-        to_update['right']['slave'] = True
-
-
-# Shields power toggle
-@RJoy.button(44)
-def handleButton( event, joy ):
-    btn = 44 # toggle button
-
-    if event.is_pressed:
-        dprint('Button_' + str(btn) + ' led B12')
-        BUTTONS['right'][btn]['right']['B12']['active'] = not BUTTONS['right'][btn]['right']['B12']['active']
-        to_update['right']['slave'] = True
