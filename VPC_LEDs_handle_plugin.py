@@ -153,14 +153,26 @@ BUTTONS = {
                         slave=False,
                         colorName='red'
                     ),
-                ],
-                slave=False ),
-            LEFT_GUID: LedBank( [
                     LED( name='H3',
                         number=LedNames.getLedNumber('H3',Joysticks[LEFT_GUID]['banks']['master']),
                         device=LEFT_GUID,
                         slave=False,
                         colorName='red'
+                    ),
+                ],
+                slave=False ),
+            RIGHT_GUID: LedBank( [
+                    LED( name='H1',
+                        number=LedNames.getLedNumber('H1',Joysticks[RIGHT_GUID]['banks']['master']),
+                        device=RIGHT_GUID,
+                        slave=False,
+                        colorName='blue'
+                    ),
+                    LED( name='H3',
+                        number=LedNames.getLedNumber('H3',Joysticks[RIGHT_GUID]['banks']['master']),
+                        device=RIGHT_GUID,
+                        slave=False,
+                        colorName='blue'
                     ),
                 ],
                 slave=False ),
@@ -403,7 +415,8 @@ def checkTimed():
             if timed_leds[led_nb]['timer'] > 0:
                 timed_leds[led_nb]['timer'] -= period
             else:
-                dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(b=button,s=btn_js_guid,l=led_name,sl=led_js_guid) )
+                dprint("Checking BUTTONS['{s}'][{b}]['{sl}']['{l}']".format(
+                        b=button,s=btn_js_guid,l=led_name,sl=led_js_guid) )
                 BUTTONS[btn_js_guid][button][led_js_guid].bank[led_name].active = False
                 to_update[led_js_guid][led_dev] = True
                 to_delete.append( led_nb )
@@ -494,6 +507,8 @@ def generateButtonEvents():
                     },
             }
             
+            
+            d_nb = 0
             for led_js_guid in BUTTONS[btn_js_guid][btn].keys():
             
                 #dprint( "Generating for {bg}:{b} -> {lg} ".format(
@@ -506,14 +521,17 @@ def generateButtonEvents():
                     generatedDict['released_event'] = ''
                     generatedDict['released'] = ''
                     
+                    
                     events_str['pressed_event']['vars'].append(f"    guid_btn = '{btn_js_guid}'\n")
                     
                     for led in BUTTONS[btn_js_guid][btn][led_js_guid].bank.values():
                         #dprint("\t Lets go doing "+led.name)
                         
-                        events_str['pressed_event']['vars'].append(f"    guid_led_{led.name} = '{led.device}'\n")
+                        # if there is more one device with led, leds vars have to be unique
+                        led_id = led.name + "_" + str(d_nb)
                         
-
+                        events_str['pressed_event']['vars'].append(f"    guid_led_{led_id} = '{led.device}'\n")
+                        
                         
                         # LedBank is for master or slave device?
                         led_dev = 'master'
@@ -521,34 +539,34 @@ def generateButtonEvents():
                             led_dev = 'slave'
                         
                         # Shorter to write, more readable. ;)
-                        button = f"BUTTONS[guid_btn][btn][guid_led_{led.name}].bank['{led.name}']"
-                        events_str['pressed_event']['vars'].append( f"    btn_{led.name} = {button}\n" )
+                        button = f"BUTTONS[guid_btn][btn][guid_led_{led_id}].bank['{led.name}']"
+                        events_str['pressed_event']['vars'].append( f"    btn_{led_id} = {button}\n" )
                         
                         if btype == 'toggle':
-                            string = f"        btn_{led.name}.active = not btn_{led.name}.active\n\n"
+                            string = f"        btn_{led_id}.active = not btn_{led_id}.active\n\n"
                             events_str['pressed_event']['events'].append(string)
                             events_str['pressed_event']['updates'][led_js_guid] = led_dev
                             
                             #dprint( "\t\ttoggle led is "+led_dev )
                             
                         elif btype == 'hold':
-                            string = f"        btn_{led.name}.active = True\n"
+                            string = f"        btn_{led_id}.active = True\n"
                             events_str['pressed_event']['events'].append(string)
                             events_str['pressed_event']['updates'][led_js_guid] = led_dev
                             
-                            string = f"        btn_{led.name}.active = False\n\n"
+                            string = f"        btn_{led_id}.active = False\n"
                             events_str['released_event']['events'].append(string)
                             events_str['released_event']['updates'][led_js_guid] = led_dev
                             
                             #dprint( "\t\thold led" )
                             
                         elif btype == 'timed':
-                            string = f"        btn_{led.name}.active = True\n"
+                            string = f"        btn_{led_id}.active = True\n"
                             
                             # Add a timer to button
                             string += "        timed_leds.append({ "
-                            string += "'led_js_guid':guid_led_{l}, 'device':'{d}', 'led':'{l}',".format(
-                                    d=led_dev, l=led.name)
+                            string += f"'led_js_guid':guid_led_{led_id}, 'device':'{led_dev}',"
+                            string += f"'led':'{led.name}',"
                             string += f"'button':'{btn}',\n                'button_js_guid': guid_btn, "
                             string += "'timer': period * 2 })\n\n"
                             
@@ -556,6 +574,8 @@ def generateButtonEvents():
                             events_str['pressed_event']['updates'][led_js_guid] = led_dev
                             
                             #dprint( "\t\ttimed led" )
+                        
+                        d_nb += 1
                 
             #generated += generatedDict['pressed_event'] + generatedDict['pressed']
             #generated += generatedDict['released_event'] + generatedDict['released']
@@ -597,6 +617,320 @@ def generateButtonEvents():
 
 # Do this, then
 # [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} 
-generateButtonEvents()
+#generateButtonEvents()
+
+
+# Fire 1 active
+@LJoy.button(1)
+def handleButton( event, joy ):
+    btn = 1 # hold button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_H1_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_H1_0 = BUTTONS[guid_btn][btn][guid_led_H1_0].bank['H1']
+    guid_led_H3_1 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_H3_1 = BUTTONS[guid_btn][btn][guid_led_H3_1].bank['H3']
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_H1_2 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_H1_2 = BUTTONS[guid_btn][btn][guid_led_H1_2].bank['H1']
+    guid_led_H3_3 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_H3_3 = BUTTONS[guid_btn][btn][guid_led_H3_3].bank['H3']
+
+    if event.is_pressed:
+        btn_H1_0.active = True
+        btn_H3_1.active = True
+        btn_H1_2.active = True
+        btn_H3_3.active = True
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['master'] = True
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['master'] = True
+
+    else:
+        btn_H1_0.active = False
+        btn_H3_1.active = False
+        btn_H1_2.active = False
+        btn_H3_3.active = False
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['master'] = True
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['master'] = True
+
+
+# Lights toggle
+@LJoy.button(33)
+def handleButton( event, joy ):
+    btn = 33 # toggle button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B1_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B1_0 = BUTTONS[guid_btn][btn][guid_led_B1_0].bank['B1']
+
+    if event.is_pressed:
+        btn_B1_0.active = not btn_B1_0.active
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Call ATC
+@LJoy.button(34)
+def handleButton( event, joy ):
+    btn = 34 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B2_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B2_0 = BUTTONS[guid_btn][btn][guid_led_B2_0].bank['B2']
+
+    if event.is_pressed:
+        btn_B2_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B2_0, 'device':'slave','led':'B2','button':'34',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Gears up / retract
+@LJoy.button(72)
+def handleButton( event, joy ):
+    btn = 72 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_GearIndicator_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearIndicator_0 = BUTTONS[guid_btn][btn][guid_led_GearIndicator_0].bank['GearIndicator']
+
+    if event.is_pressed:
+        btn_GearIndicator_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_GearIndicator_0, 'device':'slave','led':'GearIndicator','button':'72',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Gears down
+@LJoy.button(74)
+def handleButton( event, joy ):
+    btn = 74 # hold button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_GearDownLeft_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearDownLeft_0 = BUTTONS[guid_btn][btn][guid_led_GearDownLeft_0].bank['GearDownLeft']
+    guid_led_GearDownNose_1 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearDownNose_1 = BUTTONS[guid_btn][btn][guid_led_GearDownNose_1].bank['GearDownNose']
+    guid_led_GearDownRight_2 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearDownRight_2 = BUTTONS[guid_btn][btn][guid_led_GearDownRight_2].bank['GearDownRight']
+
+    if event.is_pressed:
+        btn_GearDownLeft_0.active = True
+        btn_GearDownNose_1.active = True
+        btn_GearDownRight_2.active = True
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+    else:
+        btn_GearDownLeft_0.active = False
+        btn_GearDownNose_1.active = False
+        btn_GearDownRight_2.active = False
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Expand
+@LJoy.button(73)
+def handleButton( event, joy ):
+    btn = 73 # hold button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_GearUpLeft_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearUpLeft_0 = BUTTONS[guid_btn][btn][guid_led_GearUpLeft_0].bank['GearUpLeft']
+    guid_led_GearUpNose_1 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearUpNose_1 = BUTTONS[guid_btn][btn][guid_led_GearUpNose_1].bank['GearUpNose']
+    guid_led_GearUpRight_2 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_GearUpRight_2 = BUTTONS[guid_btn][btn][guid_led_GearUpRight_2].bank['GearUpRight']
+
+    if event.is_pressed:
+        btn_GearUpLeft_0.active = True
+        btn_GearUpNose_1.active = True
+        btn_GearUpRight_2.active = True
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+    else:
+        btn_GearUpLeft_0.active = False
+        btn_GearUpNose_1.active = False
+        btn_GearUpRight_2.active = False
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+@LJoy.button(42)
+def handleButton( event, joy ):
+    btn = 42 # toggle button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B10_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B10_0 = BUTTONS[guid_btn][btn][guid_led_B10_0].bank['B10']
+
+    if event.is_pressed:
+        btn_B10_0.active = not btn_B10_0.active
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Seat out
+@LJoy.button(36)
+def handleButton( event, joy ):
+    btn = 36 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B4_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B4_0 = BUTTONS[guid_btn][btn][guid_led_B4_0].bank['B4']
+
+    if event.is_pressed:
+        btn_B4_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B4_0, 'device':'slave','led':'B4','button':'36',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Turret 1
+@LJoy.button(37)
+def handleButton( event, joy ):
+    btn = 37 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B5_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B5_0 = BUTTONS[guid_btn][btn][guid_led_B5_0].bank['B5']
+
+    if event.is_pressed:
+        btn_B5_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B5_0, 'device':'slave','led':'B5','button':'37',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Turret 2
+@LJoy.button(39)
+def handleButton( event, joy ):
+    btn = 39 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B7_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B7_0 = BUTTONS[guid_btn][btn][guid_led_B7_0].bank['B7']
+
+    if event.is_pressed:
+        btn_B7_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B7_0, 'device':'slave','led':'B7','button':'39',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+
+
+# Turret 3
+@LJoy.button(41)
+def handleButton( event, joy ):
+    btn = 41 # timed button
+
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B9_0 = '{FE8A3740-140F-11EE-8003-444553540000}'
+    btn_B9_0 = BUTTONS[guid_btn][btn][guid_led_B9_0].bank['B9']
+    guid_btn = '{FE8A3740-140F-11EE-8003-444553540000}'
+    guid_led_B8_1 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B8_1 = BUTTONS[guid_btn][btn][guid_led_B8_1].bank['B8']
+
+    if event.is_pressed:
+        btn_B9_0.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B9_0, 'device':'slave','led':'B9','button':'41',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        btn_B8_1.active = True
+        timed_leds.append({ 'led_js_guid':guid_led_B8_1, 'device':'slave','led':'B8','button':'41',
+                'button_js_guid': guid_btn, 'timer': period * 2 })
+
+        to_update['{FE8A3740-140F-11EE-8003-444553540000}']['slave'] = True
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+# Do thing
+@RJoy.button(33)
+def handleButton( event, joy ):
+    btn = 33 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B1_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B1_0 = BUTTONS[guid_btn][btn][guid_led_B1_0].bank['B1']
+
+    if event.is_pressed:
+        btn_B1_0.active = not btn_B1_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+@RJoy.button(34)
+def handleButton( event, joy ):
+    btn = 34 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B3_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B3_0 = BUTTONS[guid_btn][btn][guid_led_B3_0].bank['B3']
+
+    if event.is_pressed:
+        btn_B3_0.active = not btn_B3_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+# Quantum MODE
+@RJoy.button(39)
+def handleButton( event, joy ):
+    btn = 39 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B7_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B7_0 = BUTTONS[guid_btn][btn][guid_led_B7_0].bank['B7']
+
+    if event.is_pressed:
+        btn_B7_0.active = not btn_B7_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+# Weapons power toggle
+@RJoy.button(42)
+def handleButton( event, joy ):
+    btn = 42 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B10_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B10_0 = BUTTONS[guid_btn][btn][guid_led_B10_0].bank['B10']
+
+    if event.is_pressed:
+        btn_B10_0.active = not btn_B10_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+# Engine power toggle
+@RJoy.button(43)
+def handleButton( event, joy ):
+    btn = 43 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B11_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B11_0 = BUTTONS[guid_btn][btn][guid_led_B11_0].bank['B11']
+
+    if event.is_pressed:
+        btn_B11_0.active = not btn_B11_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
+
+# Shields power toggle
+@RJoy.button(44)
+def handleButton( event, joy ):
+    btn = 44 # toggle button
+
+    guid_btn = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    guid_led_B12_0 = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+    btn_B12_0 = BUTTONS[guid_btn][btn][guid_led_B12_0].bank['B12']
+
+    if event.is_pressed:
+        btn_B12_0.active = not btn_B12_0.active
+
+        to_update['{2E6F6CA0-141F-11EE-8005-444553540000}']['slave'] = True
+
 
 
