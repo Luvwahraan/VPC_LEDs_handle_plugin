@@ -1,5 +1,6 @@
-# Not perfect, but it works.
+# Not perfect, ~~but it works~~.
 
+This is a broken branch who doesn’t work.
 In progress… slowly. I really don’t know python. :p
 
 
