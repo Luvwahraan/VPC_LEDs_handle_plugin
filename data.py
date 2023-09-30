@@ -74,7 +74,7 @@ class LED():
             
             self.color = color
         else:
-            # Should throw an error if doesn't exist
+            # Should raise an error if doesn't exist
             self.color = ColorMap.getValue( color )
             self.colorName = color
         
@@ -83,23 +83,23 @@ class LED():
     def __init__(self, name, number, device,
             slave=True, colorName='off', active=False):
         """
-            name
-                see led_names list
-                
-            colorName
-                see ColorMap
+        name
+            see led_names list
             
-            device
-                what device the led is on: (JG guid)
-            
-            slave
-                master or slave (boolean)
-            
-            number
-                led position
-            
-            active (optional)
-                True when LED on, else False
+        colorName
+            see ColorMap
+        
+        device
+            what device the led is on: (JG guid)
+        
+        slave
+            master or slave (boolean)
+        
+        number
+            led position
+        
+        active (optional)
+            True when LED on, else False
         """
         
         self.name = name
@@ -116,6 +116,41 @@ class LED():
         
     
 
+class JoystickButton:
+    def __init__(self, number, led_list, btn_type, slave, description='', led_bank=False):
+        """
+        number
+            int
+            Physical joystick button number
+        led_list
+            LedBank
+            List of ordered LED names. See LedNames.
+        led_bank
+            LedBank
+            LedBank to handle or nothing.
+        btn_type
+            str
+            toggle, hold or timed
+        """
+        self.number = number
+        self.description = description
+        
+        if btn_type == 'toggle' or btn_type == 'hold' or btn_type == 'timed':
+            self.btype = btn_type
+        else:
+            raise Exception("Button type has to be: hold, toggle or timed.")
+        
+        self.bank = led_bank
+        
+    def addLed( self, led_nb, led):
+        if not isinstance(led, LED):
+            raise Exception(str(LED) + " is not a LED object.")
+        self.bank[led_nb] = led
+    
+    def ledColor( self, led_nb, color):
+        pass
+        self.bank[led_nb].setColor(color)
+
 class LedBank:
     """
     Create a dict of LED objects.
@@ -123,12 +158,15 @@ class LedBank:
     bank = { 'B2': LED(), 'B4':LED() }
     """
     
-    def __init__(self, l_list, slave=True):
+    def __init__(self, l_list, slave=True, guid=False):
         self.slave = slave
         self.master = not slave
         self.bank = {}
-        nb = 0
         
+        if guid != False and slave:
+            self.guid = guid
+        
+        nb = 0
         for led in l_list:
             if isinstance( led, str):
                 self.bank[led] = LED(led, nb, '', slave)

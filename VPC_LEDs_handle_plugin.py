@@ -14,11 +14,11 @@ def dprint( string ):
 
 try:
     from plugins_stuff import *
-    from data import LedNames, ColorMap, LED, LedBank
+    from data import LedNames, ColorMap, LED, LedBank, JoystickButton
 except:
     sys.path.append(sys.path[0]+'\\plugins\\VPC_LEDs_handle_plugin.')
     from plugins_stuff import *
-    from data import LedNames, ColorMap, LED, LedBank
+    from data import LedNames, ColorMap, LED, LedBank, JoystickButton
     
 
 period = 750 # ms
@@ -26,9 +26,117 @@ period = 750 # ms
 # Timers default time is period * 2, and decrease each period
 
 
+class VPC_LED_PLUGIN:
+    def __init__(self):
+        self.period = 750 # ms
+        
+        # We want guid unique
+        self.guids = {}
+        
+        self._to_update = {} # devices to update
+        self._joysticks = {} # devices, buttons and leds
+        self._leds = {}      # leds names lists
+        
+    
+    def addDevice(self, guid, led_list, name=''):
+        """
+        Add an empty device.
+        JoystickButton and LedBank have to be added next.
+        
+        guid
+            str
+            guid who can be used for gremlin ( {guid} )
+        
+        led_list
+            LedBank
+            LedBank who correspond to device. See LedNames
+        
+        name (optionnal)
+            str
+        """
+        
+        # Don't add guid twice
+        if guid in self.guids:
+            raise Exception(f"Device {guid} already known.")
+        self.guids[guid] = True
+        
+        self._joystick[guid] = {
+            'name': name,
+            'decorator': gremlin.input_devices.JoystickDecorator(
+                name,
+                guid,
+                mode_global.value ),
+            'master': False,
+            'slave': False,
+        }
+        self._to_update[guid] = {}
+        
+        if name == '':
+            name = guid
+        self.name = name
+        
+        # dict storing devices LED names lists
+        self._leds[guid] = {'master': led_list, 'slave':False}
+        
+    
+    def addSlave(self, guid, led_list):
+        """
+        Add a slave device, attached to master.
+        
+        dev_guid
+            str
+            Device master's guid
+        led_list
+            LedBank
+            LedBank who correspond to given slave device.
+        """
+        
+        self._leds[guid]['slave'] = led_list
+        
+    
+    def getLedNames(self, guid, slave=False):
+        if slave:
+            d = 'slave'
+        else:
+            d = 'master'
+        return self._leds[guid][d]
+        
+    
+    def addButton(self, btn_joy_guid, joy_btn_nb, btype, description='', slave=False, led_bank=False):
+        """
+        
+        """
+        
+        ms = 'master'
+        if slave:
+            ms = 'slave'
+        
+        led_names = self.getLedNames(btn_joy_guid, slave)
+        self._joystick[btn_joy_guid][ms] = JoystickButton(
+                joy_btn_nb, led_names, btype,
+                slave, description=description )
+        
+    
+    def addLed(self, btn_joy_guid, joy_btn_nb, led, slave=False):
+        self._joystick[btn_joy_guid][ms].addLed(joy_btn_nb, led)
+        
+    
+
 
 LEFT_GUID = '{FE8A3740-140F-11EE-8003-444553540000}'
 RIGHT_GUID = '{2E6F6CA0-141F-11EE-8005-444553540000}'
+JLEDHandle = VPC_LED_PLUGIN()
+
+# Constellation Alpha Prime left with Panel#2 slave
+JLEDHandle.addDevice(LEFT_GUID, LedNames.alpha_prime, name='LEFT VPC AlphaP CP2')
+JLEDHandle.addSlave(LEFT_GUID, LedNames.panel2)
+JLEDHandle.addButton( LEFT_GUID, 34, 'hold', description = 'Lights', slave=True )
+
+# Constellation Alpha Prime left with Panel#1 slave
+JLEDHandle.addDevice(RIGHT_GUID, LedNames.alpha_prime, name='RIGHT VPC AlphaP CP1')
+JLEDHandle.addSlave(RIGHT_GUID, LedNames.panel1)
+JLEDHandle.addButton( RIGHT_GUID, 39, 'toggle', description = 'Quantum mode', slave=True )
+
 
 Joysticks = {
     LEFT_GUID: {
@@ -54,16 +162,15 @@ Joysticks = {
         },
     },
 }
-    
-LJoy = Joysticks[LEFT_GUID]['decorator']
-RJoy = Joysticks[RIGHT_GUID]['decorator']
-
 
 # Periodic callback will update device setted to True
 to_update = {
     RIGHT_GUID: {'master': True, 'slave': True},
     LEFT_GUID: {'master': True, 'slave': True},
     }
+
+LJoy = Joysticks[LEFT_GUID]['decorator']
+RJoy = Joysticks[RIGHT_GUID]['decorator']
 
 # Timed LED list
 timed_leds = []
