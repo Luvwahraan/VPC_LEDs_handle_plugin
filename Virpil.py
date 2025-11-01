@@ -53,9 +53,16 @@ class Virpil_device:
         self._is_master = False
         self._led_bank = LedNames.getBank()
         self._hid_cmd = 0
+        self._debug = False
         
         self.update = True
-        
+
+    def setDebug(self, value=True):
+        self._debug = value
+        if (self._debug):
+            print("DEBUG mode.")
+        else:
+            print("Disabled DEBUG mode.")
     
     def getCmd(self):
         return self._hid_cmd
@@ -73,16 +80,30 @@ class Virpil_device:
     
     def getLedBank(self):
         return self._led_bank
+
+    def getLedNames(self):
+        return self._led_bank.getNames()
     
     def setLedBank(self, led_bank):
         if not isinstance(led_bank, LedBank):
             raise Exception("{s} is not a LedBank object.".format(s=led_bank) )
+        if self._debug:
+            print('Creating LedBank:')
+            for led in led_bank.getNames():
+                print(led)
+
+        self._led_bank = led_bank
     
     def checkLedValue(self, value):
-        if 0 <= value and value <= 255: # between 0b00000000 and 0b11111111
+        if isinstance(value, str):
+            if not value in ColorMap.colors:
+                raise LEDValueRange('LED value ' + value + 'doesnt exist.')
             return
-        else:
-            raise LEDValueRange('LED value is not in 0-255 range.')
+        elif isinstance(value, int):
+            if 0 <= value and value <= 255: # between 0b00000000 and 0b11111111
+                return
+            else:
+                raise LEDValueRange('LED value is not in 0-255 range.')
         
     
     def setLed(self, btnName, value):
@@ -92,8 +113,10 @@ class Virpil_device:
         """
         self.checkLedValue(value)
         try:
-            self._led_bank[btnName].changeColor(value)
+            self._led_bank.setLed(btnName, value)
+            if self._debug: print( 'Setted ' + btnName + ' to ' + str(value) )
         except:
+            if self._debug: print( 'No LED setted. ' + traceback.format_exc() )
             return False
         
     
@@ -265,7 +288,7 @@ class Virpil_master(Virpil_device):
             raise Exception("Can't send both master and slave feature_report")
 
         if master:
-            #print( 'sending for master' )
+            if self._debug: print( 'sending for master' )
         
             # Use arg featureReport, or construct with self data.
             if featureReport:
@@ -277,10 +300,10 @@ class Virpil_master(Virpil_device):
             if self._hidraw.send_feature_report( self._featureReports['master'] ) == -1:
                 #print( self._featureReports['master'] )
                 raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
-            #print( self._featureReports['master'] )
+            if self._debug: print( self._featureReports['master'] )
         
         if slave:
-            #print( 'sending for slave' )
+            if self._debug: print( 'sending for slave' )
             
             if featureReport == True:
                 #print( 'Received featureReport' )
@@ -292,7 +315,7 @@ class Virpil_master(Virpil_device):
                 #print( self._featureReports['slave'] )
                 raise Exception( self._hidraw.error() )
                 #raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
-            #print( self._featureReports['slave'] )
+            if self._debug: print( self._featureReports['slave'] )
         
     
 

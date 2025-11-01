@@ -1,45 +1,45 @@
 
 class ColorMap:
     colors = {
-      'off': 0b10000000,
-      'white-dim': 0b10010101,
-      'white-medium': 0b10101010,
-      'white-bright': 0b10111111,
-      'white': 0b10101010,
-      'red-dim': 0b10000001,
-      'red-medium': 0b10000010,
-      'red-bright': 0b10000011,
-      'red': 0b10000010,
-      'green-dim': 0b10000100,
-      'green-medium': 0b10001000,
-      'green-bright': 0b10001100,
-      'green': 0b10001000,
-      'blue-dim': 0b10010000,
-      'blue-medium': 0b10100000,
-      'blue-bright': 0b10110000,
-      'blue': 0b10100000,
-      'yellow-dim': 0b10000101,
-      'yellow-medium': 0b10001010,
-      'yellow-bright': 0b10001111,
-      'yellow': 0b10001010,
-      'magenta-dim': 0b10010001,
+      'off':            0b10000000,
+      'white-dim':      0b10010101,
+      'white-medium':   0b10101010,
+      'white-bright':   0b10111111,
+      'white':          0b10101010,
+      'red-dim':        0b10000001,
+      'red-medium':     0b10000010,
+      'red-bright':     0b10000011,
+      'red':            0b10000010,
+      'green-dim':      0b10000100,
+      'green-medium':   0b10001000,
+      'green-bright':   0b10001100,
+      'green':          0b10001000,
+      'blue-dim':       0b10010000,
+      'blue-medium':    0b10100000,
+      'blue-bright':    0b10110000,
+      'blue':           0b10100000,
+      'yellow-dim':     0b10000101,
+      'yellow-medium':  0b10001010,
+      'yellow-bright':  0b10001111,
+      'yellow':         0b10001010,
+      'magenta-dim':    0b10010001,
       'magenta-medium': 0b10100010,
       'magenta-bright': 0b10110011,
-      'magenta': 0b10100010,
-      'cyan-dim': 0b10010100,
-      'cyan-medium': 0b10101000,
-      'cyan-bright': 0b10111100,
-      'cyan': 0b10101000,
-      'orange': 0b10001011,
-      'salmon': 0b10011011,
-      'deep_salmon': 0b10000110,
-      'red-orange': 0b10000111,
-      'red-pink': 0b10010011,
-      'pink': 0b10100111,
-      'purple': 0b10110010,
-      'indigo': 0b10100001,
-      'light-blue': 0b10111010,
-      'lime-green': 0b10001110
+      'magenta':        0b10100010,
+      'cyan-dim':       0b10010100,
+      'cyan-medium':    0b10101000,
+      'cyan-bright':    0b10111100,
+      'cyan':           0b10101000,
+      'orange':         0b10001011,
+      'salmon':         0b10011011,
+      'deep_salmon':    0b10000110,
+      'red-orange':     0b10000111,
+      'red-pink':       0b10010011,
+      'pink':           0b10100111,
+      'purple':         0b10110010,
+      'indigo':         0b10100001,
+      'light-blue':     0b10111010,
+      'lime-green':     0b10001110
     }
     
     @classmethod
@@ -62,12 +62,12 @@ class ColorMap:
 
 class LED():
     
-    def setColor(self, color):
+    def setColor(self, color='off'):
     
         # Can be set with color value instead of name.
         if isinstance(color, int):
-            if color > 255 or color < 128:
-                raise Exception("LED colors are 128+color, on 8bits.")
+            if color > 255 or color < 64:
+                raise Exception("Invalid LED colors, not in range 64+color, on 8bits:" + str(color) )
                 
             # No value if unkown color
             self.colorName = ColorMap.getName(color)
@@ -126,7 +126,7 @@ class LedBank:
     def __init__(self, l_list, slave=True):
         self.slave = slave
         self.master = not slave
-        self.bank = {}
+        self.bank = { }
         nb = 0
         
         for led in l_list:
@@ -135,7 +135,10 @@ class LedBank:
             elif isinstance( led, LED):
                 self.bank[led.name] = led
             nb += 1
-        
+
+    def setLed(self, name, value):
+        self.bank[name].setColor(value)
+
     def getNames(self):
         return self.bank.keys()
     
@@ -159,9 +162,9 @@ class LedBank:
         return values
     
         
-    def setAllLeds(self, colorName='off'):
+    def setAllLeds(self, color='off'):
         for led in self.bank.keys():
-            self.bank[led].setColor()
+            self.bank[led].setColor(color)
         
     
 
@@ -192,8 +195,6 @@ class LedNames:
     
     def getLedNumber(led_name, led_device):
         return led_device.bank[led_name].number
-        pass
     
     def getLedNames(led_device):
         return list( led_device.bank.keys() )
-        pass
