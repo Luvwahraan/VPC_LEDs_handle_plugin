@@ -18,24 +18,6 @@ class LEDBankExcept(Exception):
     pass
 class NoConnectionError(Exception):
     pass
-
-class Device_Type:
-    def __init__(self, led_types):
-        if led_types.lower() == 'default':
-            self.command = 0x64
-        elif led_types.lower() == 'add-board':
-            self.command = 0x65
-        elif led_types.lower() == 'on-board':
-            self.command = 0x66
-        elif led_types.lower() == 'slave-board':
-            self.command = 0x67
-        elif led_types.lower() == 'extra-leds':
-            self.command = 0x68
-        else:
-            raise Exception('Bad board type.')
-        
-        self.led_types = led_types
-        
     
 
 class Virpil_device:
@@ -65,7 +47,7 @@ class Virpil_device:
 
     """
     
-    def __init__(self, led_types):
+    def __init__(self):
         self._slave = False
         self._is_slave = False
         self._is_master = False
@@ -144,9 +126,8 @@ class Virpil_slave(Virpil_device):
     """
     
     def __init__(self):
-        Virpil_device.__init__(self, 'slave-board')
+        Virpil_device.__init__(self)
         self.setThisSlave()
-        self.setCmd(0x67) # SLAVE_BOARD
         
     
 
@@ -194,7 +175,7 @@ class Virpil_master(Virpil_device):
             self._hidraw.close()
         
     
-    def __init__(self, led_types, vendor_id=False, product_id=False, path=False, slave=False ):
+    def __init__(self, vendor_id=False, product_id=False, path=False, slave=False ):
         """
         Need path or vendor_id/product_id couple.
         slave is optionnal Virpil_slave
@@ -204,7 +185,7 @@ class Virpil_master(Virpil_device):
         to True, with or without port.
         """
         
-        Virpil_device.__init__(self, led_types)
+        Virpil_device.__init__(self)
         
         self._featureReports = { 'master': [], 'slave': [] }
         
@@ -267,6 +248,16 @@ class Virpil_master(Virpil_device):
         self._featureReports['slave'] = [0x2, self._slave.getCmd(), 0x00, 0x00, 0x00] + self._slave.getLedValues() + [0xF0]
         self._slave.update = True
     
+    def activeMaster(self, featureReport=False):
+        self.sendFeatureReport(True, False, featureReport)
+    
+    def activeSlave(self, featureReport=False):
+        self.sendFeatureReport(False, True, featureReport)
+
+    def activeAll(self, featureReport=False):
+        self.sendFeatureReport(True, False, featureReport)
+        self.sendFeatureReport(False, True, featureReport)
+
     def sendFeatureReport(self, master=False, slave=False, featureReport=False):
         masterFeature = []
         slaveFeature = []
@@ -318,9 +309,9 @@ class Virpil_Alpha_Prime(Virpil_master):
     """
     
     def __init__(self, vendor_id=0, product_id=0, slave=0, server=False, client=False):
-        Virpil_master.__init__(self, 'extra-leds', vendor_id=vendor_id, product_id=product_id, slave=slave)
+        Virpil_master.__init__(self, vendor_id=vendor_id, product_id=product_id, slave=slave)
         Virpil_device.setLedBank(self, LedNames.alpha_prime)
-        self.setCmd(0x68) # EXTRA_LEDS
+        self.setCmd(0x67)
         
     
 
@@ -335,6 +326,7 @@ class Virpil_Control_Panel_1(Virpil_slave):
     def __init__(self):
         Virpil_slave.__init__(self)
         Virpil_device.setLedBank(self, LedNames.panel1)
+        self.setCmd(0x6A)
         
     
 
@@ -349,5 +341,6 @@ class Virpil_Control_Panel_2(Virpil_slave):
     def __init__(self):
         Virpil_slave.__init__(self)
         Virpil_device.setLedBank(self, LedNames.panel2)
+        self.setCmd(0x6A)
         
     
