@@ -54,8 +54,6 @@ class Virpil_device:
         self._led_bank = LedNames.getBank()
         self._hid_cmd = 0
         
-        self._led_types = Device_Type( led_types )
-        
         self.update = True
         
     
