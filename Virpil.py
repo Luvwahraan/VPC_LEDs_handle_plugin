@@ -5,6 +5,8 @@ import socket
 import threading
 import traceback
 
+from evdev import list_devices, InputDevice
+
 from data import LedNames, ColorMap, LedBank
 from plugins_stuff import LED as LED
 
@@ -194,9 +196,17 @@ class Virpil_master(Virpil_device):
         # USB hid raw
         if self._hidraw != False:
             self._hidraw.close()
+
+    def searchDevice(self):
+        for path in list_devices():
+            dev = InputDevice(path)
+            if dev.info.vendor == self._vendor_id and dev.info.product == self._product_id:
+                return dev
+        else:
+            raise RuntimeError("No device found.")
         
     
-    def __init__(self, vendor_id=False, product_id=False, path=False, slave=False ):
+    def __init__(self, vendor_id=False, product_id=False, slave=False ):
         """
         Need path or vendor_id/product_id couple.
         slave is optionnal Virpil_slave
@@ -210,20 +220,21 @@ class Virpil_master(Virpil_device):
         
         self._featureReports = { 'master': [], 'slave': [] }
         
-        if path != False: 
-            # Doesnt verify if path is valid.
-            self._path = path
-        elif vendor_id != False and product_id != False:
+        if vendor_id != False and product_id != False:
+            self._vendor_id = vendor_id
+            self._product_id = product_id
             self._path =  self.getPathByIds(vendor_id, product_id)
         else:
             raise Exception('Missing usb hid args.')
             
         if slave != False:
             self.setSlave(slave)
-        
+
         self._hidraw = False
         self._initHID()
-        
+
+        self.device = self.searchDevice()
+
     
     def getPathByIds(self, vendor_id, product_id):
         """
@@ -247,7 +258,7 @@ class Virpil_master(Virpil_device):
         self._slave = slave
 
     def getSlaveLedNames(self):
-        return self._slave.getLedNames()
+        return self._slave.getNames()
     
     def setAllMasterLeds(self, value):
         Virpil_device.setAllLeds(self, value)
