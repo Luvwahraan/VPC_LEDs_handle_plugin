@@ -98,15 +98,15 @@ class Multi_Device_Handler():
         
     
     def randomizeLeds(self):
-        return
+        #return
         while True:
             for name, device_dict in self._devices.items():
             
-                for led in device_dict['device']._slave.led_names:
+                for led in device_dict['device'].getSlaveLedNames():
                     if device_dict['device'].update:
                         device_dict['device'].setSlaveLed( led, getRandomColor() )
                 
-                for led in device_dict['device'].led_names:
+                for led in device_dict['device'].getLedNames():
                     if device_dict['device'].update:
                         device_dict['device'].setLed( led, getRandomColor() )
             
@@ -127,6 +127,7 @@ class Multi_Device_Handler():
         # Starting devices threads
         for name, device_dict in self._devices.items():
             device_dict['thread'].start()
+            
         
         main.join(2)
         
@@ -147,14 +148,14 @@ try:
 
     devHandle.addDevice('VPC_left',
             Virpil_Alpha_Prime(
-                    vendor_id=0x3344, product_id=0x8137,
+                    vendor_id=0x3344, product_id=0x138,
                     slave=Virpil_Control_Panel_2(),
                     ),
             ConnectHandle(server=True)
             )
     devHandle.addDevice('VPC_right',
             Virpil_Alpha_Prime(
-                    vendor_id=0x3344, product_id=0xC138,
+                    vendor_id=0x3344, product_id=0x4139,
                     slave=Virpil_Control_Panel_1(),
                     ),
             ConnectHandle(server=True)

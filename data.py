@@ -1,4 +1,6 @@
 
+import random
+
 class ColorMap:
     colors = {
       'off':            0b10000000,
@@ -41,6 +43,10 @@ class ColorMap:
       'light-blue':     0b10111010,
       'lime-green':     0b10001110
     }
+    
+    @classmethod
+    def randomColor(self):
+        return random.randrange(64, 256)
     
     @classmethod
     def getValue( self, cname ):
