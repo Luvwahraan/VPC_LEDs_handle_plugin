@@ -97,7 +97,7 @@ class Multi_Device_Handler():
                         )
         
     
-    def randomizeLeds(self):
+    def randomizeLeds(self, maxTime=5):
         #return
         while True:
             for name, device_dict in self._devices.items():
@@ -112,10 +112,11 @@ class Multi_Device_Handler():
             
                 if device_dict['device'].update:
                     print( 'Activate ' + name )
-                    device_dict['device'].sendFeatureReport(master=True, slave=True)
+                    device_dict['device'].activeMaster()
+                    device_dict['device'].activeSlave()
             
-            #time.sleep( random.uniform(0.5, 30) )
-            time.sleep(120)
+            time.sleep( random.uniform(0.5, maxTime) )
+            #time.sleep(maxTime)
         
     
     
