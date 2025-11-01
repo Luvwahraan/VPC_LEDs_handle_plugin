@@ -245,7 +245,9 @@ class Virpil_master(Virpil_device):
         elif not isinstance( slave, Virpil_slave ):
             raise WarnVirpilSlaveType('Be aware: argument is not a Virpil_slave.' )
         self._slave = slave
-        
+
+    def getSlaveLedNames(self):
+        return self._slave.getLedNames()
     
     def setAllMasterLeds(self, value):
         Virpil_device.setAllLeds(self, value)
