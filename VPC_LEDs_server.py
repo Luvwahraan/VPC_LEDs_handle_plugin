@@ -7,7 +7,7 @@ import threading
 import traceback
 import sys
 
-from plugins_stuff import ConnectHandle
+from ConnectHandle import ConnectHandle
 from Virpil import *
 
 """
@@ -88,17 +88,29 @@ class Multi_Device_Handler():
             self.addConnection(device_name, conn)
         
         # Create threads but for masters only, and only servers
+        """
+        args:
+            callback for featureReport
+            set led callback
+            stopCallback
+            serverName
+        """
         if isinstance( device, Virpil_master ):
             if self._devices[device_name]['connection'].isServer():
                 self._devices[device_name]['thread'] = threading.Thread(
                         target=self._devices[device_name]['connection'].serverListen,
                         name=device_name,
-                        args=[ self._devices[device_name]['device'].sendFeatureReport ]
+                        args=[
+                            self._devices[device_name]['device'].sendFeatureReport,
+                            self._devices[device_name]['device'].activeLed,
+                            self._devices[device_name]['device'].activeAllLeds, # stop callback
+                            device_name
+                            ]
                         )
         
     
     def randomizeLeds(self, maxTime=5):
-        #return
+        return
         while True:
             for name, device_dict in self._devices.items():
             
@@ -118,11 +130,13 @@ class Multi_Device_Handler():
             time.sleep( random.uniform(0.5, maxTime) )
             #time.sleep(maxTime)
         
-    
+    def _mainThread(self):
+        pass
     
     def start(self):
         # Disco thread. \o_
-        main = threading.Thread( target=self.randomizeLeds, daemon=True )
+        #main = threading.Thread( target=self.randomizeLeds, daemon=True )
+        main = threading.Thread( target=self._mainThread, daemon=True )
         main.start()
     
         # Starting devices threads

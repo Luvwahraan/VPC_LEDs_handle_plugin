@@ -55,7 +55,7 @@ class Virpil_device:
         self._is_master = False
         self._led_bank = LedNames.getBank()
         self._hid_cmd = 0
-        self._debug = False
+        self._debug = True
         
         self.update = True
 
@@ -79,6 +79,12 @@ class Virpil_device:
     def setThisSlave(self):
         self._is_slave = True
         self._master = False
+
+    def getDeviceType(self):
+        if self._is_slave:
+            return 'slave'
+        else:
+            return 'master'
     
     def getLedBank(self):
         return self._led_bank
@@ -90,9 +96,10 @@ class Virpil_device:
         if not isinstance(led_bank, LedBank):
             raise Exception("{s} is not a LedBank object.".format(s=led_bank) )
         if self._debug:
-            print('Creating LedBank:')
+            print("  Creating LedBank:\n    ", end='')
             for led in led_bank.getNames():
-                print(led)
+                print(led, end=' ')
+            print('')
 
         self._led_bank = led_bank
     
@@ -234,7 +241,15 @@ class Virpil_master(Virpil_device):
         self._initHID()
 
         self.device = self.searchDevice()
+        self._valid = True
 
+    def __del__(self):
+        try:
+            if self._valid:
+                self.activeAll('off')
+        except:
+            pass
+        pass
     
     def getPathByIds(self, vendor_id, product_id):
         """
@@ -258,22 +273,86 @@ class Virpil_master(Virpil_device):
         self._slave = slave
 
     def getSlaveLedNames(self):
-        return self._slave.getNames()
+        return self._slave.getLedNames()
     
-    def setAllMasterLeds(self, value):
+    def setAllMasterLeds(self, value='off'):
+        """
+        Set all LED on master to a value.
+        Do not activate led on device (see activeMaster methods).
+        """
         Virpil_device.setAllLeds(self, value)
     
-    def setAllSlaveLeds(self, value):
+    def setAllSlaveLeds(self, value='off'):
+        """
+        Set all LED on slave to a value.
+        Do not activate led on device (see activeSlave methods).
+        """
         self._slave.setAllLeds(value)
     
-    def setSlaveLed(self, btnName, value):
+    def setSlaveLed(self, btnName, value='off'):
+        """
+        Set specific led on slave to a value.
+        Do not activate led on device (see activeSlave methods).
+        """
         self._slave.setLed(btnName, value)
     
-    def setAllLeds(self, value):
+    def setAllLeds(self, value='off'):
+        """
+        Set leds to a value for master and slave.
+        Do not activate led on device (see active* methods).
+        """
         self.setAllMasterLeds(value)
         self.setAllSlaveLeds(value)
+
+    def activeLed(self, btnName, value='off'):
+        """
+        Search a LED by his button name, then activate.
+        """
+        device = self.searchLed(btnName)
+
+        if isinstance(device, Virpil_slave):
+            self.setSlaveLed(btnName, value)
+            self.activeSlave()
+        elif isinstance(device, Virpil_master):
+            self.setLed(btnName, value)
+            self.active()
+        else:
+            if self._debug: print( 'Unknow device ' + str(type(device) ) )
         
-    
+        return
+        
+        if device != False:
+            if device._is_slave:
+                self.setSlaveLed(btnName, value)
+                self.activeSlave()
+            else:
+                self.setLed(btnName, value)
+                self.active()
+
+    def activeAllLeds(self, value='off'):
+        """
+        Set all leds to a value (defaut off), for master and slave,
+        then activate on device.
+        """
+        self.setAllMasterLeds(value)
+        self.setAllSlaveLeds(value)
+        self.active()
+        self.activeSlave()
+
+    def searchLed(self, btnName):
+        """
+        Search if there is a led on btnName, and in wich device
+        (master or slave).
+        Return device or False.
+        """
+        for led in self.getLedNames():
+            if led == btnName:
+                return self
+        for led in self._slave.getLedNames():
+            if led == btnName:
+                return self._slave
+            
+        
     def constructMasterFeature(self):
         self._featureReports['master'] = [0x2, self.getCmd(), 0x00, 0x00, 0x00] + self.getLedValues() + [0xF0]
         self.update = True
@@ -283,6 +362,8 @@ class Virpil_master(Virpil_device):
         self._slave.update = True
     
     def activeMaster(self, featureReport=False):
+        self.sendFeatureReport(True, False, featureReport)
+    def active(self, featureReport=False):
         self.sendFeatureReport(True, False, featureReport)
     
     def activeSlave(self, featureReport=False):
@@ -301,33 +382,30 @@ class Virpil_master(Virpil_device):
             raise Exception("Can't send both master and slave feature_report")
 
         if master:
-            if self._debug: print( 'sending for master' )
+            if self._debug: print( 'sending for master:', end=' ' )
         
             # Use arg featureReport, or construct with self data.
             if featureReport:
-                #print( 'Received featureReport' )
+                if self._debug: print( 'Received master featureReport:', end=' ' )
                 self._featureReports['master'] = featureReport
             else:
                 self.constructMasterFeature()
                 
             if self._hidraw.send_feature_report( self._featureReports['master'] ) == -1:
-                #print( self._featureReports['master'] )
-                raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
+                raise Exception( self._hidraw.error() + ': ' + str(self._featureReports['master']) )
             if self._debug: print( self._featureReports['master'] )
         
         if slave:
-            if self._debug: print( 'sending for slave' )
+            if self._debug: print( 'sending for slave:', end=' ' )
             
-            if featureReport == True:
-                #print( 'Received featureReport' )
+            if featureReport:
+                if self._debug: print( 'Received slave featureReport:', end=' ' )
                 self._featureReports['slave'] = featureReport
             else:
                 self.constructSlaveFeature()
             
             if self._hidraw.send_feature_report( self._featureReports['slave'] ) == -1:
-                #print( self._featureReports['slave'] )
-                raise Exception( self._hidraw.error() )
-                #raise Exception( self._hidraw.error() + ' ' + str(self._featureReports['master']) )
+                raise Exception( self._hidraw.error() + ': ' + str(self._featureReports['slave']) )
             if self._debug: print( self._featureReports['slave'] )
         
     
