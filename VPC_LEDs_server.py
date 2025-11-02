@@ -7,7 +7,7 @@ import threading
 import traceback
 import sys
 
-from ConnectHandle import ConnectHandle
+from ConnectHandle import ConnectHandle, Command
 from Virpil import *
 
 """
@@ -102,7 +102,7 @@ class Multi_Device_Handler():
                         name=device_name,
                         args=[
                             self._devices[device_name]['device'].sendFeatureReport,
-                            self._devices[device_name]['device'].activeLed,
+                            self._devices[device_name]['device'].activeLedDict,
                             self._devices[device_name]['device'].activeAllLeds, # stop callback
                             device_name
                             ]

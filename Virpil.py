@@ -95,11 +95,11 @@ class Virpil_device:
     def setLedBank(self, led_bank):
         if not isinstance(led_bank, LedBank):
             raise Exception("{s} is not a LedBank object.".format(s=led_bank) )
-        if self._debug:
-            print("  Creating LedBank:\n    ", end='')
-            for led in led_bank.getNames():
-                print(led, end=' ')
-            print('')
+        #if self._debug:
+        #    print("  Creating LedBank:\n    ", end='')
+        #    for led in led_bank.getNames():
+        #        print(led, end=' ')
+        #    print('')
 
         self._led_bank = led_bank
     
@@ -303,6 +303,37 @@ class Virpil_master(Virpil_device):
         """
         self.setAllMasterLeds(value)
         self.setAllSlaveLeds(value)
+
+    def activeLedDict(self, colors):
+        """
+        For each color, set multiple led
+        """
+        if self._debug: print("Multiple LED triggered: " + str(colors) )
+        
+        # First set all led to given colors.
+        for color in colors.keys():
+            print( str(color) + ' for buttons:', end=' ' )
+            for button in colors[color]:
+                print(button, end=',')
+                self.setUnknownLed(button, color)
+                
+        print(' ')
+
+        # then activates 
+        self.active()
+        self.activeSlave()
+    
+    def setUnknownLed(self, btnName, value='off'):
+        """
+        Search a LED by his button name.
+        """
+        device = self.searchLed(btnName)
+        if isinstance(device, Virpil_slave):
+            self.setSlaveLed(btnName, value)
+        elif isinstance(device, Virpil_master):
+            self.setLed(btnName, value)
+        else:
+            if self._debug: print( 'Unknow device ' + str(type(device) ) )
 
     def activeLed(self, btnName, value='off'):
         """

@@ -14,9 +14,11 @@ for i in range(0,35):
     TURN_OFF.append(0)
 
 class Command():
-    kill =      bytes([0xff])
-    led =       bytes([0xf9])
-    feature =   bytes([0x02])
+    end =       0xf0 # end data
+    kill =      0xff # stop server command
+    led =       0xf9 # parsing led command
+    separator = 0x01 # parsing led separator
+    feature =   0x02 # full featureReport command
 
 
 class ConnectHandle():
@@ -43,7 +45,7 @@ class ConnectHandle():
     def sendFeatureRecord(self, data):        
         callback( master=True, featureReport=data )
 
-    def killServer(self):
+    def _killServer(self):
         # Stop server
         print('Stop data reveived; killing server ' + self.getName() )
         
@@ -57,6 +59,59 @@ class ConnectHandle():
     def setName(self, name):
         if self.isServer():
             self._name = name
+
+    def _ledHandle(self, client):
+        buffer = ''
+        led = ''
+        colors = {}
+        leds = []
+
+        if not self._running: return
+        
+        # First get color value.
+        color = int.from_bytes(client.recv(1))
+        #print('  color found: ' + str(color) )
+        
+        # Continue getting data until end byte.
+        color_mode = False
+        while buffer != bytes([Command.end]):
+            buffer = client.recv(1)
+            #print( '  Recv:' + str(buffer) )
+
+            # Comma separates leds (0x2c in ASCII)
+            # So all led data we got should be a button name.
+            if buffer == bytes([0x2c]):
+                #print('    new button coming')
+                leds.append(led)
+                led = ''
+
+            # New led command -> another color and led(s) coming
+            # We need to add already known led to colors dict
+            elif buffer == bytes([Command.led]):
+                #print('    new color coming')
+                leds.append(led)
+                colors[color] = leds
+                led = ''
+                leds = []
+                
+                # Next byte is color, we get it now.
+                color = int.from_bytes(client.recv(1))
+                #print('    color found: ' + str(color) )
+            
+            # End data
+            elif buffer == bytes([Command.end]):
+                #print('    end leds')
+                leds.append(led)
+                colors[color] = leds
+
+            # A str byte.
+            else:
+                #print('    str byte:'+ str(buffer) )
+                led = led+buffer.decode()
+        
+        if self._running:
+            print('Leds: ' + str(colors))
+            self._ledCallback(colors)
     
     def serverListen(self,
             callback=False,
@@ -75,11 +130,9 @@ class ConnectHandle():
             self._featureReportCallback = callback
 
         if not stopCallback == False:
-            print('Stop callback defined')
             self._stopCallback = stopCallback
 
-        if ledCallback != False:
-            print('LED callback defined')
+        if not ledCallback == False:
             self._ledCallback = ledCallback
 
         if not serverName == '':
@@ -107,28 +160,19 @@ class ConnectHandle():
             command = client.recv(1)
             print("Command: "+str(command))
 
-            if command == bytes(KILL_SERVER): # kill server byte
+            if command == bytes([Command.kill]): # kill server byte
                 print("Received command kill server")
-                self.killServer()
+                self._killServer()
                 return
                 
-            elif command == bytes([0xf9]): # one led command: color int then led(s) str
+            elif command == bytes([Command.led]): # one led command: color int then led(s) str
                 print("Received command led")
-                color = int.from_bytes(client.recv(1))
-                buffer = ''
-                leds = ''
-                while buffer != bytes([0xff]):
-                    buffer = client.recv(1)
-                    if buffer != bytes([0xff]):
-                        leds = leds+buffer.decode()
-                        #print( buffer.decode(), end='' )
-                
-                if self._running:
-                    print(leds + ':' + str(color))
-                    self._ledCallback(leds, color)
+                self._ledHandle(client)
+                continue
                 
             elif command == bytes([0x02]): # first feature report byte
                 print("Received command featureReport")
+                # We can receive until 0xf0 byte, but we know featureReport size is 38 bytes.
                 data = command + bytes( client.recv( 37 ) )
                 if self._running:
                     #callback( master=True, featureReport=data )
