@@ -35,5 +35,5 @@ Thanks too to [charliefoxtwo], for same reason: [virpilLeds.md ](https://gist.gi
 
 # ToDO
 
-- Fix and complete colors
-- A better way to kill server
+- Kill both thread in same time.
+- input-remapper integration
