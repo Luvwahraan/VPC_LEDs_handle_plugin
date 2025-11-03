@@ -413,7 +413,7 @@ class Virpil_master(Virpil_device):
 
             # Use arg featureReport, or construct with self data.
             if featureReport:
-                if self._debug: print( 'Received master featureReport:', end=' ' )
+
                 self._featureReports['master'] = featureReport
             else:
                 self.constructMasterFeature()
@@ -426,7 +426,6 @@ class Virpil_master(Virpil_device):
             if self._debug: print( 'sending for slave:', end=' ' )
 
             if featureReport:
-                if self._debug: print( 'Received slave featureReport:', end=' ' )
                 self._featureReports['slave'] = featureReport
             else:
                 self.constructSlaveFeature()

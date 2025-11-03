@@ -8,15 +8,17 @@ connectHandles = {
     'right': ConnectHandle( client=True, port=14518, ledAddr=[0x67,0x6a] )
     }
 
-print('Full featureReport for left and right.')
+print('Full featureReport for left.')
 left_master = [2, 103, 0, 0, 0, 254, 129, 66, 123, 148, 105, 118, 254, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
 left_slave = [2, 106, 0, 0, 0, 64, 72, 72, 176, 174, 65, 101, 156, 84, 161, 110, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
-right_master = [2, 103, 0, 0, 0, 113, 162, 154, 195, 124, 86, 225, 181, 133, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
-right_slave = [2, 106, 0, 0, 0, 132, 113, 66, 194, 132, 225, 74, 209, 124, 120, 66, 194, 191, 123, 226, 75, 130, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
 connectHandles['left'].clientSend( bytes(left_master) )
 connectHandles['left'].clientSend( bytes(left_slave) )
-connectHandles['right'].clientSend( bytes(right_master) )
-connectHandles['right'].clientSend( bytes(right_slave) )
+
+#print('Full featureReport for right.')
+#right_master = [2, 103, 0, 0, 0, 113, 162, 154, 195, 124, 86, 225, 181, 133, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
+#right_slave = [2, 106, 0, 0, 0, 132, 113, 66, 194, 132, 225, 74, 209, 124, 120, 66, 194, 191, 123, 226, 75, 130, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240]
+#connectHandles['right'].clientSend( bytes(right_master) )
+#connectHandles['right'].clientSend( bytes(right_slave) )
 
 time.sleep(5)
 
@@ -55,7 +57,7 @@ def allRight():
         connectHandles['right'].clientSend(bytes(data))
 
 allLeft()
-allRight()
+#allRight()
 
 time.sleep(5)
 
@@ -75,12 +77,7 @@ connectHandles['left'].clientSend( bytes(ldata) )
 
 time.sleep(5)
 
-#connectHandles['left'].clientSend( bytes([0xfa, 0xbb, 0xaf]) )
-#connectHandles['right'].clientSend( bytes([0xfa, 0xbb, 0xaf]) )
-
-connectHandles['left'].stop()
-connectHandles['right'].stop()
-
+print('Stop server')
 connectHandles['left'].stop()
 connectHandles['right'].stop()
 
